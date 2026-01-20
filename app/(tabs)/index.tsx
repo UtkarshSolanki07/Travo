@@ -1,98 +1,173 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useRef, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  TextInput,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  Keyboard,
+} from "react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import MapComponent, { UrlTile, Marker } from "@/components/MapComponent";
+import { searchPlaces, reverseGeocode } from "../../services/nominatim";
+import debounce from "lodash.debounce";
 
-export default function HomeScreen() {
+const MAP_KEY = process.env.EXPO_PUBLIC_MAPTILER_KEY;
+
+export default function Index() {
+  const mapRef = useRef<any>(null);
+
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<any>(null);
+
+  const debouncedSearch = useRef(
+    debounce(async (text: string) => {
+      if (text.trim().length >= 3) {
+        const data = await searchPlaces(text);
+        setResults(data);
+      } else {
+        setResults([]);
+      }
+    }, 500)
+  ).current;
+
+  const handleSearch = (text: string) => {
+    setQuery(text);
+    if (text.trim().length === 0) {
+      setResults([]);
+      debouncedSearch.cancel();
+    } else {
+      debouncedSearch(text);
+    }
+  };
+
+  const handleSelect = (place: any) => {
+    const lat = parseFloat(place.lat);
+    const lon = parseFloat(place.lon);
+
+    setSelectedPlace({
+      name: place.display_name,
+      latitude: lat,
+      longitude: lon,
+    });
+
+    mapRef.current?.animateToRegion(
+      {
+        latitude: lat,
+        longitude: lon,
+        latitudeDelta: 0.3,
+        longitudeDelta: 0.3,
+      },
+      800
+    );
+
+    setResults([]);
+    setQuery(place.display_name);
+    Keyboard.dismiss();
+  };
+
+  const handleLongPress = async (event: any) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+
+    setSelectedPlace({
+      name: "Loading address...",
+      latitude,
+      longitude,
+    });
+
+    const data = await reverseGeocode(latitude, longitude);
+    const name =
+      data?.display_name ||
+      `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+
+    setSelectedPlace({
+      name,
+      latitude,
+      longitude,
+    });
+
+    setQuery(name);
+    setResults([]);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <View style={styles.container}>
+      <MapComponent 
+        ref={mapRef} 
+        style={styles.map} 
+        onLongPress={handleLongPress}
+      >
+        <UrlTile
+          urlTemplate={`https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAP_KEY}`}
+          maximumZ={19}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        {selectedPlace && (
+          <Marker
+            coordinate={{
+              latitude: selectedPlace.latitude,
+              longitude: selectedPlace.longitude,
+            }}
+            title={selectedPlace.name}
+          />
+        )}
+      </MapComponent>
+
+      {/* 🔍 Search Box */}
+      <View style={styles.searchBox}>
+        <TextInput
+          placeholder="Search city or place..."
+          value={query}
+          onChangeText={handleSearch}
+          style={styles.input}
+        />
+
+        <FlatList
+          data={results}
+          keyExtractor={(item) => item.place_id.toString()}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.item}
+              onPress={() => handleSelect(item)}
+            >
+              <Text numberOfLines={2}>{item.display_name}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1 },
+  map: { flex: 1 },
+
+  searchBox: {
+    position: "absolute",
+    top: 50,
+    width: "90%",
+    alignSelf: "center",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 10,
+    elevation: 5,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+
+  input: {
+    height: 46,
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
+    paddingHorizontal: 10,
+    marginBottom: 5,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+
+  item: {
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderColor: "#eee",
   },
 });
