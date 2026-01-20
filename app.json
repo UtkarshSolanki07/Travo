@@ -22,9 +22,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyBBluE5SntOHFNX2ZPAUEn_68V3Minbe08"
-        }
+        
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
