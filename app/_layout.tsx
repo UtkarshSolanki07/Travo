@@ -1,12 +1,15 @@
-import { ClerkProvider, useAuth } from '@clerk/clerk-expo'
+import { ClerkProvider, useAuth, useUser } from '@clerk/clerk-expo'
 import { tokenCache } from '@clerk/clerk-expo/token-cache'
 import { Slot, useRouter, useSegments } from 'expo-router'
 import { useEffect } from 'react'
+import { LocationProvider } from '../context/LocationContext'
+import { database } from '../services/database'
 
 const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 function InitialLayout() {
   const { isLoaded, isSignedIn } = useAuth()
+  const { user } = useUser()
   const segments = useSegments()
   const router = useRouter()
 
@@ -16,13 +19,23 @@ function InitialLayout() {
     const inAuthGroup = segments[0] === '(auth)'
 
     if (isSignedIn && inAuthGroup) {
-      // Redirect to home if signed in but accessing auth screens
-      router.replace('/')
+      // Sync user data to Supabase
+      if (user) {
+        database.syncUser(
+          user.id,
+          user.emailAddresses[0]?.emailAddress,
+          user.username || user.firstName || 'user',
+          user.fullName,
+          user.imageUrl
+        ).catch(err => console.error('Error syncing user:', err))
+      }
+      
+      // Removed redirection to '/' as it prevents adding additional accounts via (auth) screens
     } else if (!isSignedIn && !inAuthGroup) {
       // Redirect to sign-in if not signed in and trying to access app
       router.replace('/sign-in')
     }
-  }, [isSignedIn, isLoaded, segments, router])
+  }, [isSignedIn, isLoaded, segments, router, user])
 
   return <Slot />
 }
@@ -30,7 +43,9 @@ function InitialLayout() {
 export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY!} tokenCache={tokenCache}>
-      <InitialLayout />
+      <LocationProvider>
+        <InitialLayout />
+      </LocationProvider>
     </ClerkProvider>
   )
 }

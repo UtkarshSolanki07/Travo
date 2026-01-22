@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -12,15 +12,38 @@ import {
 import MapComponent, { UrlTile, Marker } from "@/components/MapComponent";
 import { searchPlaces, reverseGeocode } from "../../services/nominatim";
 import debounce from "lodash.debounce";
+import { useLocationContext } from "@/context/LocationContext";
 
 const MAP_KEY = process.env.EXPO_PUBLIC_MAPTILER_KEY;
 
 export default function Index() {
   const mapRef = useRef<any>(null);
+  const { userLocation } = useLocationContext();
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
+
+  // Sync map with user location shared from profile
+  useEffect(() => {
+    if (userLocation) {
+      setSelectedPlace({
+        name: "My Location",
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+      });
+
+      mapRef.current?.animateToRegion(
+        {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        },
+        1000
+      );
+    }
+  }, [userLocation]);
 
   const debouncedSearch = useRef(
     debounce(async (text: string) => {
