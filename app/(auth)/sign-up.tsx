@@ -4,6 +4,7 @@ import { useSignUp, useOAuth } from '@clerk/clerk-expo'
 import { Link, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as WebBrowser from 'expo-web-browser'
+import * as Linking from 'expo-linking'
 import { useWarmUpBrowser } from '../../hooks/useWarmUpBrowser'
 
 WebBrowser.maybeCompleteAuthSession()
@@ -73,7 +74,9 @@ export default function SignUpScreen() {
 
   const onGoogleSignUpPress = React.useCallback(async () => {
     try {
-      const { createdSessionId, setActive } = await startOAuthFlow()
+      const { createdSessionId, setActive } = await startOAuthFlow({
+        redirectUrl: Linking.createURL('/', { scheme: 'travo' }),
+      })
 
       if (createdSessionId) {
         setActive!({ session: createdSessionId })

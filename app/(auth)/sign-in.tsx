@@ -4,6 +4,7 @@ import { Text, TextInput, TouchableOpacity, View, StyleSheet, KeyboardAvoidingVi
 import React from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import * as WebBrowser from 'expo-web-browser'
+import * as Linking from 'expo-linking'
 import { useWarmUpBrowser } from '../../hooks/useWarmUpBrowser'
 
 WebBrowser.maybeCompleteAuthSession()
@@ -47,7 +48,9 @@ export default function Page() {
 
   const onGoogleSignInPress = React.useCallback(async () => {
     try {
-      const { createdSessionId, setActive } = await startOAuthFlow()
+      const { createdSessionId, setActive } = await startOAuthFlow({
+        redirectUrl: Linking.createURL('/', { scheme: 'travo' }),
+      })
 
       if (createdSessionId) {
         setActive!({ session: createdSessionId })
