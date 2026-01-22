@@ -24,15 +24,16 @@ export default function Index() {
   const [results, setResults] = useState<any[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
 
+  const hasInitialLocation = useRef(false);
   // Sync map with user location shared from profile
   useEffect(() => {
-    if (userLocation) {
+    if (userLocation && !hasInitialLocation.current) {
+      hasInitialLocation.current = true;
       setSelectedPlace({
         name: "My Location",
         latitude: userLocation.latitude,
         longitude: userLocation.longitude,
       });
-
       mapRef.current?.animateToRegion(
         {
           latitude: userLocation.latitude,

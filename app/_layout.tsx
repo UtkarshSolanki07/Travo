@@ -1,3 +1,4 @@
+import 'react-native-url-polyfill/auto'
 import { ClerkProvider, useAuth, useUser } from '@clerk/clerk-expo'
 import { tokenCache } from '@clerk/clerk-expo/token-cache'
 import { Slot, useRouter, useSegments } from 'expo-router'

@@ -1,5 +1,5 @@
 import { SignedIn, SignedOut, useUser, useClerk } from '@clerk/clerk-expo'
-import { Link, useNavigation, useRouter } from 'expo-router'
+import { Link, useRouter } from 'expo-router'
 import {
   Text,
   View,
@@ -21,7 +21,6 @@ import type { LocationSubscription } from 'expo-location'
 export default function SettingsScreen() {
   const { user: clerkUser } = useUser()
   const { client, setActive } = useClerk()
-  const navigation = useNavigation()
   const router = useRouter()
   const { updateLocation } = useLocationContext()
 
@@ -30,6 +29,11 @@ export default function SettingsScreen() {
 
   const trackingSubscription = useRef<LocationSubscription | null>(null)
   const interestsRef = useRef<string[]>([])
+  const userIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    userIdRef.current = clerkUser?.id ?? null
+  }, [clerkUser])
 
   const stopTracking = useCallback(() => {
     if (trackingSubscription.current) {
@@ -55,7 +59,7 @@ export default function SettingsScreen() {
       if (trackingSubscription.current) {
         trackingSubscription.current.remove()
       }
-
+      
       trackingSubscription.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Balanced,
@@ -66,10 +70,11 @@ export default function SettingsScreen() {
           const { latitude, longitude } = location.coords
           updateLocation(latitude, longitude)
 
-          if (clerkUser) {
+          const userId = userIdRef.current
+          if (userId) {
             try {
               await database.updateLiveLocation(
-                clerkUser.id,
+                userId,
                 latitude,
                 longitude,
                 interestsRef.current,
@@ -85,7 +90,7 @@ export default function SettingsScreen() {
       Alert.alert('Error', 'Unable to start location tracking right now.')
       setIsLocationEnabled(false)
     }
-  }, [clerkUser, updateLocation])
+  }, [updateLocation])
 
   const loadSettings = useCallback(async () => {
     if (!clerkUser) return
@@ -255,7 +260,7 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             style={styles.settingRow}
-            onPress={() => navigation.navigate('EditInterests' as never)}
+            onPress={() => router.push('/profile')}
           >
             <View style={styles.settingInfo}>
               <Ionicons name="star-outline" size={24} color="#6366f1" />

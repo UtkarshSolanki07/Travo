@@ -1,5 +1,3 @@
-import { Redirect } from 'expo-router';
+import { Unmatched } from 'expo-router';
 
-export default function NotFound() {
-  return <Redirect href="/" />;
-}
+export default Unmatched;

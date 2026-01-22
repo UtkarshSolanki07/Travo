@@ -1,5 +1,5 @@
 import { Cloudinary } from "@cloudinary/url-gen";
-import { upload } from "cloudinary-react-native";
+// // import { upload } from "cloudinary-react-native";
 
 export const cld = new Cloudinary({
   cloud: {
@@ -37,9 +37,6 @@ export const uploadToCloudinary = async (fileUri: string) => {
       {
         method: "POST",
         body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
       }
     );
     const data = await response.json();
