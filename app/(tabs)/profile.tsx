@@ -13,6 +13,17 @@ const INITIAL_INTERESTS = [
   'Outdoor Sports', 'Live Music', 'Art Galleries'
 ]
 
+/**
+ * Render the user's profile screen with viewing and editing capabilities.
+ *
+ * Loads profile and stats for the authenticated Clerk user and presents a UI that:
+ * - Displays avatar, display name, location, bio, and profile stats (friends, activities).
+ * - Allows toggling edit mode to change display name, bio, city, country, and avatar (uploads to Cloudinary).
+ * - Manages interests with a preset list plus the ability to add custom interests; selections are persisted to the database.
+ * - Shows a signed-out placeholder with links to sign in or sign up when no user is authenticated.
+ *
+ * @returns The React element for the profile screen UI.
+ */
 export default function ProfileScreen() {
   const { user: clerkUser } = useUser()
   

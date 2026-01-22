@@ -9,6 +9,14 @@ import { useWarmUpBrowser } from '../../hooks/useWarmUpBrowser'
 
 WebBrowser.maybeCompleteAuthSession()
 
+/**
+ * Render the sign-in page with email/password and Google OAuth authentication options.
+ *
+ * Manages local form state, loading and error UI, performs Clerk sign-in and OAuth flows,
+ * activates the created session on success, and navigates to the home route.
+ *
+ * @returns A React element representing the sign-in page UI.
+ */
 export default function Page() {
   useWarmUpBrowser()
   const { signIn, setActive, isLoaded } = useSignIn()

@@ -9,6 +9,14 @@ import { useWarmUpBrowser } from '../../hooks/useWarmUpBrowser'
 
 WebBrowser.maybeCompleteAuthSession()
 
+/**
+ * Renders the sign-up screen with email/password and Google OAuth flows.
+ *
+ * Displays a form to create an account, handles email verification when required,
+ * activates a session on successful sign-up or OAuth completion, and navigates to the app root.
+ *
+ * @returns The sign-up screen React element.
+ */
 export default function SignUpScreen() {
   useWarmUpBrowser()
   const { isLoaded, signUp, setActive } = useSignUp()

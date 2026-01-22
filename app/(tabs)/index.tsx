@@ -16,6 +16,17 @@ import { useLocationContext } from "@/context/LocationContext";
 
 const MAP_KEY = process.env.EXPO_PUBLIC_MAPTILER_KEY;
 
+/**
+ * Map screen with search, place selection, and long-press reverse geocoding.
+ *
+ * Synchronizes the map with a shared user location when available, provides a debounced
+ * place search (starts at 3+ characters), allows selecting search results to center
+ * the map and place a marker, and supports long-pressing the map to reverse-geocode
+ * a coordinate into a place name. Renders a map, a marker for the selected place,
+ * and a searchable list of results.
+ *
+ * @returns The JSX element for the map screen UI.
+ */
 export default function Index() {
   const mapRef = useRef<any>(null);
   const { userLocation } = useLocationContext();
