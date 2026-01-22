@@ -61,16 +61,24 @@ export default function ProfileScreen() {
   }, [clerkUser, loadProfile])
 
   const toggleInterest = async (interest: string) => {
+    const previousInterests = [...selectedInterests]
     const newInterests = selectedInterests.includes(interest)
       ? selectedInterests.filter(i => i !== interest)
       : [...selectedInterests, interest]
     
+    // Optimistic Update
     setSelectedInterests(newInterests)
 
     if (clerkUser) {
-      await database.updateProfile(clerkUser.id, {
-        interests: newInterests
-      })
+      try {
+        await database.updateProfile(clerkUser.id, {
+          interests: newInterests
+        })
+      } catch (error) {
+        console.error('Error updating interests:', error)
+        setSelectedInterests(previousInterests) // Rollback
+        Alert.alert('Error', 'Failed to update interests. Please try again.')
+      }
     }
   }
 
@@ -82,14 +90,23 @@ export default function ProfileScreen() {
       return
     }
     
+    const previousInterests = [...selectedInterests]
     const newInterests = [...selectedInterests, interest]
+    
+    // Optimistic Update
     setSelectedInterests(newInterests)
     setCustomInterest('')
 
     if (clerkUser) {
-      await database.updateProfile(clerkUser.id, {
-        interests: newInterests
-      })
+      try {
+        await database.updateProfile(clerkUser.id, {
+          interests: newInterests
+        })
+      } catch (error) {
+        console.error('Error adding interest:', error)
+        setSelectedInterests(previousInterests) // Rollback
+        Alert.alert('Error', 'Failed to save interest. Please try again.')
+      }
     }
   }
 
@@ -106,7 +123,7 @@ export default function ProfileScreen() {
         setSaving(true)
         const uploadUrl = await uploadToCloudinary(result.assets[0].uri)
         
-        // Update local state
+        // Update local state selectively
         setEditingData(prev => ({ ...prev, avatar_url: uploadUrl }))
         
         // Save to database immediately if we have a user
@@ -130,10 +147,12 @@ export default function ProfileScreen() {
     setSaving(true)
     try {
       await database.updateUser(clerkUser.id, editingData)
-      setUserData({ ...userData, ...editingData } as User)
+      // Safe merge: ensure we don't lose existing fields not in editingData
+      setUserData(prev => prev ? { ...prev, ...editingData } : null)
       setIsEditing(false)
       Alert.alert('Success', 'Profile updated successfully!')
     } catch (error) {
+      console.error('Save profile error:', error)
       Alert.alert('Error', 'Failed to update profile')
     } finally {
       setSaving(false)

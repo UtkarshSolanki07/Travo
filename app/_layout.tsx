@@ -20,10 +20,11 @@ function InitialLayout() {
 
     if (isSignedIn && inAuthGroup) {
       // Sync user data to Supabase
-      if (user) {
+      const email = user?.emailAddresses[0]?.emailAddress
+      if (user && email) {
         database.syncUser(
           user.id,
-          user.emailAddresses[0]?.emailAddress,
+          email,
           user.username || user.firstName || 'user',
           user.fullName,
           user.imageUrl
