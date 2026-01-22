@@ -12,6 +12,12 @@ interface LocationContextType {
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
+/**
+ * Provides a LocationContext to descendant components and manages the current user location.
+ *
+ * @param children - React nodes that will receive the location context
+ * @returns A React element that supplies `userLocation` and `updateLocation` to its children
+ */
 export function LocationProvider({ children }: { children: ReactNode }) {
   const [userLocation, setUserLocation] = useState<Location | null>(null);
 
@@ -26,6 +32,12 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Provides access to the current location context value.
+ *
+ * @returns The LocationContext value containing `userLocation` and `updateLocation`.
+ * @throws Error if the hook is used outside of a LocationProvider.
+ */
 export function useLocationContext() {
   const context = useContext(LocationContext);
   if (context === undefined) {

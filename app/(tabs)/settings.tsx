@@ -18,6 +18,16 @@ import { useLocationContext } from '@/context/LocationContext'
 import { database } from '@/services/database'
 import type { LocationSubscription } from 'expo-location'
 
+/**
+ * Render the Settings screen for managing privacy, live location sharing, account sessions, and user preferences.
+ *
+ * This component displays sections for Privacy & Security (including a live location toggle), Account Details
+ * (list and switch between Clerk sessions, add new account), Preferences (navigate to edit interests), and Sign out.
+ * It also handles loading state, persistently updating the user's live-tracking preference, starting/stopping
+ * foreground location tracking, and updating the live location to the app context and backend.
+ *
+ * @returns The Settings screen as a React element to be rendered in the app.
+ */
 export default function SettingsScreen() {
   const { user: clerkUser } = useUser()
   const { client, setActive } = useClerk()

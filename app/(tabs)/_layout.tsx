@@ -2,6 +2,11 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
+/**
+ * Renders a bottom tab navigator containing Map, Profile, and Settings screens.
+ *
+ * @returns The tab layout component rendering three tabs: Map, Profile, and Settings.
+ */
 export default function TabLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false }}>
