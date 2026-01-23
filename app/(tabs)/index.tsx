@@ -68,8 +68,11 @@ export default function Index() {
   };
 
   const handleSelect = (place: any) => {
+    if (!place.center || place.center.length < 2) {
+      console.warn('Invalid place data:', place);
+      return;
+    }
     const [lon, lat] = place.center;
-
     setSelectedPlace({
       name: place.place_name,
       latitude: lat,

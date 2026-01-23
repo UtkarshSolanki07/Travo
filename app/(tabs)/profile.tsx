@@ -785,10 +785,14 @@ export default function ProfileScreen() {
             <View style={styles.detailContent}>
               <View style={styles.detailHeader}>
                 <View style={styles.detailAuthor}>
-                  <Image 
-                    source={{ uri: getAvatarUrl(selectedPost?.user?.avatar_url, 80) }} 
-                    style={styles.authorAvatar} 
-                  />
+                  {selectedPost?.user?.avatar_url ? (
+                    <Image 
+                      source={{ uri: getAvatarUrl(selectedPost.user.avatar_url, 80) }} 
+                      style={styles.authorAvatar} 
+                    />
+                  ) : (
+                    <Ionicons name="person-circle" size={40} color="#6366f1" />
+                  )}
                   <View>
                     <Text style={styles.authorName}>{selectedPost?.user?.display_name || 'User'}</Text>
                     {selectedPost?.location_name && (
@@ -800,7 +804,6 @@ export default function ProfileScreen() {
                   <Ionicons name="close" size={24} color="#64748b" />
                 </TouchableOpacity>
               </View>
-
               <ScrollView>
                 {selectedPost?.media_url && (
                   <Image 
@@ -839,7 +842,11 @@ export default function ProfileScreen() {
                     <Text style={styles.commentsTitle}>Comments</Text>
                     {comments.map(comment => (
                       <View key={comment.id} style={styles.commentItem}>
-                        <Image source={{ uri: getAvatarUrl(comment.user?.avatar_url, 60) }} style={styles.commentAvatar} />
+                        {comment.user?.avatar_url ? (
+                          <Image source={{ uri: getAvatarUrl(comment.user.avatar_url, 60) }} style={styles.commentAvatar} />
+                        ) : (
+                          <Ionicons name="person-circle" size={32} color="#94a3b8" />
+                        )}
                         <View style={styles.commentTextContainer}>
                           <Text style={styles.commentAuthor}>{comment.user?.display_name}</Text>
                           <Text style={styles.commentText}>{comment.text}</Text>

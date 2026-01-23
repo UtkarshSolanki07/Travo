@@ -28,9 +28,21 @@ export const uploadToCloudinary = async (fileUri: string, resourceType: 'image' 
   console.log('File URI:', fileUri.substring(0, 30) + '...');
 
   // Handle file name and extension
+  const MIME_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  avi: 'video/x-msvideo',
+};
+  // Handle file name and extension
   const filename = fileUri.split('/').pop() || 'upload';
   const match = /\.(\w+)$/.exec(filename);
-  const type = match ? `${resourceType}/${match[1]}` : resourceType;
+  const ext = match?.[1]?.toLowerCase();
+  const type = (ext && MIME_TYPES[ext]) || `${resourceType}/${ext || '*'}`;
 
   const formData = new FormData();
   // @ts-ignore
@@ -85,7 +97,11 @@ export const getOptimizedUrl = (url?: string, { width, height, crop = 'fill' }: 
  * Specifically for avatars - uses face detection cropping
  */
 export const getAvatarUrl = (url?: string, size: number = 200) => {
-  return getOptimizedUrl(url, { width: size, height: size, crop: 'thumb' }).replace('/upload/', '/upload/g_face/');
+  if (!url) return '';
+  if (!url.includes('cloudinary.com')) return url;
+ 
+  const transformation = `f_auto,q_auto,w_${size},h_${size},c_thumb,g_face`;
+  return url.replace('/upload/', `/upload/${transformation}/`);
 };
 
 /**
@@ -93,7 +109,10 @@ export const getAvatarUrl = (url?: string, size: number = 200) => {
  */
 export const getVideoThumbUrl = (url?: string, { width = 400, height = 400 } = {}) => {
   if (!url) return '';
+  if (!url.includes('cloudinary.com')) return url;
+  
   // Cloudinary allows changing extension to .jpg to get a frame
   const baseUrl = url.split('.').slice(0, -1).join('.') + '.jpg';
-  return getOptimizedUrl(baseUrl, { width, height, crop: 'fill' }).replace('/upload/', '/upload/so_auto/');
+  const transformation = `f_auto,q_auto,w_${width},h_${height},c_fill,so_auto`;
+  return baseUrl.replace('/upload/', `/upload/${transformation}/`);
 };

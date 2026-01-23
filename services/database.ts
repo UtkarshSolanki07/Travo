@@ -83,13 +83,7 @@ export interface PostComment {
 }
 
 export const database = {
-  /**
-   * Syncs basic user data from Clerk to Supabase
-   */
-  /**
-   * Syncs basic user data from Clerk to Supabase
-   * Only updates display_name and avatar_url if they are currently null in Supabase
-   */
+
   async syncUser(id: string, email: string, username: string, fullName?: string | null, imageUrl?: string | null) {
     if (!id || !email) {
       console.warn('syncUser: missing required id or email')
@@ -265,37 +259,23 @@ export const database = {
    * Increments friend count for a user (placeholder for friend flow)
    */
   async incrementFriendsCount(userId: string) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('friends_count')
-      .eq('user_id', userId)
-      .single()
-    
-    await this.updateProfile(userId, {
-      friends_count: (profile?.friends_count || 0) + 1
-    })
+    const { error } = await supabase.rpc('increment_friends_count', { user_id_arg: userId })
+    if (error) throw error
   },
 
   /**
    * Increments activity count for a user (placeholder for activity flow)
    */
   async incrementActivitiesCount(userId: string) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('activities_count')
-      .eq('user_id', userId)
-      .single()
-    
-    await this.updateProfile(userId, {
-      activities_count: (profile?.activities_count || 0) + 1
-    })
+    const { error } = await supabase.rpc('increment_activities_count', { user_id_arg: userId })
+    if (error) throw error
   },
 
   /**
    * Creates a new post
    */
   async createPost(data: Partial<Post>) {
-    const id = Math.random().toString(36).substring(2, 15) // Simple ID generator
+    const id = crypto.randomUUID()
     const { error } = await supabase
       .from('posts')
       .insert({
@@ -312,29 +292,30 @@ export const database = {
    * Toggles a like on a post for a specific user
    */
   async toggleLike(postId: string, userId: string) {
-    // Check if already liked
-    const { data: existingLike } = await supabase
+    // Try to delete first - if it succeeds, we unliked
+    const { data: deleted, error: deleteError } = await supabase
       .from('post_likes')
-      .select('*')
+      .delete()
       .eq('post_id', postId)
       .eq('user_id', userId)
-      .maybeSingle()
-
-    if (existingLike) {
-      const { error } = await supabase
-        .from('post_likes')
-        .delete()
-        .eq('post_id', postId)
-        .eq('user_id', userId)
-      if (error) throw error
+      .select()
+    if (deleteError) throw deleteError
+    
+    if (deleted && deleted.length > 0) {
       return false // Unliked
-    } else {
-      const { error } = await supabase
-        .from('post_likes')
-        .insert({ post_id: postId, user_id: userId })
-      if (error) throw error
-      return true // Liked
     }
+    
+    // Nothing was deleted, so insert
+    const { error: insertError } = await supabase
+      .from('post_likes')
+      .insert({ post_id: postId, user_id: userId })
+    
+    if (insertError) {
+      // Handle unique constraint violation (concurrent insert)
+      if (insertError.code === '23505') return true
+      throw insertError
+    }
+    return true // Liked
   },
 
   /**
@@ -355,7 +336,7 @@ export const database = {
    * Adds a comment to a post
    */
   async addComment(postId: string, userId: string, text: string) {
-    const id = Math.random().toString(36).substring(2, 15)
+    const id = crypto.randomUUID()
     const { error } = await supabase
       .from('post_comments')
       .insert({
