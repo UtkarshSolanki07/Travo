@@ -12,6 +12,15 @@ export interface UserProfile {
   updated_at?: string
 }
 
+export type UserStatus = 'idle' | 'in_activity' | 'looking'
+
+export interface UserPresence {
+  user_id: string
+  status: UserStatus
+  current_activity_id?: string
+  last_seen_at?: string
+}
+
 export interface User {
   id: string
   email: string
@@ -22,6 +31,55 @@ export interface User {
   city?: string
   bio?: string
   created_at?: string
+}
+
+export type ActivitySize = 'duo' | 'trio' | 'group'
+export type ActivityVisibility = 'public' | 'friends' | 'invite_only'
+
+export interface Activity {
+  id: string
+  creator_id: string
+  title: string
+  description?: string
+  activity_type?: string
+  size_type: ActivitySize
+  interests?: string[]
+  start_time: string
+  end_time?: string
+  latitude: number
+  longitude: number
+  city?: string
+  max_participants: number
+  visibility: ActivityVisibility
+  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
+  created_at?: string
+}
+
+export interface Post {
+  id: string
+  author_id: string
+  text?: string
+  media_url?: string
+  media_type?: 'image' | 'video' | 'note'
+  venue_name?: string  // eg: "Cafe", "Monument"
+  location_name?: string // eg: "Paris, France"
+  city?: string
+  country?: string
+  visibility?: 'public' | 'friends'
+  created_at: string
+  user?: User
+  likes_count?: number
+  comments_count?: number
+  is_liked?: boolean
+}
+
+export interface PostComment {
+  id: string
+  post_id: string
+  author_id: string
+  text: string
+  created_at: string
+  user?: User
 }
 
 export const database = {
@@ -162,6 +220,151 @@ export const database = {
       .from('users')
       .update(updateData)
       .eq('id', id)
+    
+    if (error) throw error
+  },
+
+  /**
+   * Fetches posts made by a specific user
+   */
+  async getPosts(userId: string): Promise<Post[]> {
+    if (!userId) return []
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*, user:users!posts_author_id_fkey(*)')
+      .eq('author_id', userId)
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('getPosts error:', error)
+      return [] // Return empty array on error for now
+    }
+    return data || []
+  },
+
+  /**
+   * Fetches posts where the user is tagged
+   */
+  async getTaggedPosts(userId: string): Promise<Post[]> {
+    if (!userId) return []
+    const { data, error } = await supabase
+      .from('post_tags')
+      .select('post:posts(*, user:users!posts_author_id_fkey(*))')
+      .eq('user_id', userId)
+      .order('created_at', { foreignTable: 'posts', ascending: false })
+    
+    if (error) {
+      console.error('getTaggedPosts error:', error)
+      return []
+    }
+    // Flatten the result since it's a join
+    return (data || []).map((item: any) => item.post).filter(Boolean)
+  },
+
+  /**
+   * Increments friend count for a user (placeholder for friend flow)
+   */
+  async incrementFriendsCount(userId: string) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('friends_count')
+      .eq('user_id', userId)
+      .single()
+    
+    await this.updateProfile(userId, {
+      friends_count: (profile?.friends_count || 0) + 1
+    })
+  },
+
+  /**
+   * Increments activity count for a user (placeholder for activity flow)
+   */
+  async incrementActivitiesCount(userId: string) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('activities_count')
+      .eq('user_id', userId)
+      .single()
+    
+    await this.updateProfile(userId, {
+      activities_count: (profile?.activities_count || 0) + 1
+    })
+  },
+
+  /**
+   * Creates a new post
+   */
+  async createPost(data: Partial<Post>) {
+    const id = Math.random().toString(36).substring(2, 15) // Simple ID generator
+    const { error } = await supabase
+      .from('posts')
+      .insert({
+        id,
+        created_at: new Date().toISOString(),
+        ...data
+      })
+    
+    if (error) throw error
+    return id
+  },
+
+  /**
+   * Toggles a like on a post for a specific user
+   */
+  async toggleLike(postId: string, userId: string) {
+    // Check if already liked
+    const { data: existingLike } = await supabase
+      .from('post_likes')
+      .select('*')
+      .eq('post_id', postId)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (existingLike) {
+      const { error } = await supabase
+        .from('post_likes')
+        .delete()
+        .eq('post_id', postId)
+        .eq('user_id', userId)
+      if (error) throw error
+      return false // Unliked
+    } else {
+      const { error } = await supabase
+        .from('post_likes')
+        .insert({ post_id: postId, user_id: userId })
+      if (error) throw error
+      return true // Liked
+    }
+  },
+
+  /**
+   * Fetches comments for a specific post
+   */
+  async getComments(postId: string): Promise<PostComment[]> {
+    const { data, error } = await supabase
+      .from('post_comments')
+      .select('*, user:users(*)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true })
+    
+    if (error) throw error
+    return data || []
+  },
+
+  /**
+   * Adds a comment to a post
+   */
+  async addComment(postId: string, userId: string, text: string) {
+    const id = Math.random().toString(36).substring(2, 15)
+    const { error } = await supabase
+      .from('post_comments')
+      .insert({
+        id,
+        post_id: postId,
+        author_id: userId,
+        text,
+        created_at: new Date().toISOString()
+      })
     
     if (error) throw error
   }

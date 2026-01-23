@@ -214,7 +214,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Details</Text>
           
-          {client.sessions.map((session) => (
+          {client?.sessions?.map((session) => (
             <TouchableOpacity 
               key={session.id} 
               style={[

@@ -10,7 +10,7 @@ import {
 } from "react-native";
 
 import MapComponent, { UrlTile, Marker } from "@/components/MapComponent";
-import { searchPlaces, reverseGeocode } from "../../services/nominatim";
+import { searchAll, reverseGeocode } from "../../services/maptiler";
 import debounce from "lodash.debounce";
 import { useLocationContext } from "@/context/LocationContext";
 
@@ -49,7 +49,7 @@ export default function Index() {
   const debouncedSearch = useRef(
     debounce(async (text: string) => {
       if (text.trim().length >= 3) {
-        const data = await searchPlaces(text);
+        const data = await searchAll(text, userLocation || undefined);
         setResults(data);
       } else {
         setResults([]);
@@ -68,11 +68,10 @@ export default function Index() {
   };
 
   const handleSelect = (place: any) => {
-    const lat = parseFloat(place.lat);
-    const lon = parseFloat(place.lon);
+    const [lon, lat] = place.center;
 
     setSelectedPlace({
-      name: place.display_name,
+      name: place.place_name,
       latitude: lat,
       longitude: lon,
     });
@@ -88,7 +87,7 @@ export default function Index() {
     );
 
     setResults([]);
-    setQuery(place.display_name);
+    setQuery(place.place_name);
     Keyboard.dismiss();
   };
 
@@ -103,7 +102,7 @@ export default function Index() {
 
     const data = await reverseGeocode(latitude, longitude);
     const name =
-      data?.display_name ||
+      data?.place_name ||
       `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
 
     setSelectedPlace({
@@ -142,7 +141,7 @@ export default function Index() {
       {/* 🔍 Search Box */}
       <View style={styles.searchBox}>
         <TextInput
-          placeholder="Search city or place..."
+          placeholder="Search for a place, cafe, etc..."
           value={query}
           onChangeText={handleSearch}
           style={styles.input}
@@ -150,14 +149,14 @@ export default function Index() {
 
         <FlatList
           data={results}
-          keyExtractor={(item) => item.place_id.toString()}
+          keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.item}
               onPress={() => handleSelect(item)}
             >
-              <Text numberOfLines={2}>{item.display_name}</Text>
+              <Text numberOfLines={2}>{item.place_name}</Text>
             </TouchableOpacity>
           )}
         />
