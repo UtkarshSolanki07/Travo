@@ -18,6 +18,13 @@ import { useLocationContext } from '@/context/LocationContext'
 import { database } from '@/services/database'
 import type { LocationSubscription } from 'expo-location'
 
+/**
+ * Render the Settings screen and manage user-specific settings such as live location tracking, account sessions, and preferences.
+ *
+ * The component loads and persists the current user's profile settings, requests and updates foreground location tracking as configured, updates live location to the database while tracking, and provides UI for switching or adding accounts, editing interests, and signing out.
+ *
+ * @returns A React element that renders the Settings screen UI.
+ */
 export default function SettingsScreen() {
   const { user: clerkUser } = useUser()
   const { client, setActive } = useClerk()
