@@ -20,6 +20,13 @@ const INITIAL_INTERESTS = [
   'Outdoor Sports', 'Live Music', 'Art Galleries'
 ]
 
+/**
+ * Display the user's profile screen including profile viewing/editing, interests, post grids (my posts and tagged), post creation, and post detail with comments and likes.
+ *
+ * Loads and synchronizes profile data and posts for the signed-in user, provides optimistic updates for interests and profile edits, supports media uploads for avatars and posts, and offers debounced venue/location search with optional location fallback.
+ *
+ * @returns The React element representing the full profile screen UI.
+ */
 export default function ProfileScreen() {
   const { user: clerkUser } = useUser()
   const { userLocation, updateLocation } = useLocationContext()
