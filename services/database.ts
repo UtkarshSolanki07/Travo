@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import * as Crypto from 'expo-crypto'
 
 export interface UserProfile {
   user_id: string
@@ -275,7 +276,7 @@ export const database = {
    * Creates a new post
    */
   async createPost(data: Partial<Post>) {
-    const id = crypto.randomUUID()
+    const id = Crypto.randomUUID()
     const { error } = await supabase
       .from('posts')
       .insert({
@@ -336,7 +337,7 @@ export const database = {
    * Adds a comment to a post
    */
   async addComment(postId: string, userId: string, text: string) {
-    const id = crypto.randomUUID()
+    const id = Crypto.randomUUID()
     const { error } = await supabase
       .from('post_comments')
       .insert({
