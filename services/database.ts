@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import * as Crypto from 'expo-crypto'
 
 export interface UserProfile {
   user_id: string
@@ -10,6 +11,15 @@ export interface UserProfile {
   friends_count?: number
   activities_count?: number
   updated_at?: string
+}
+
+export type UserStatus = 'idle' | 'in_activity' | 'looking'
+
+export interface UserPresence {
+  user_id: string
+  status: UserStatus
+  current_activity_id?: string
+  last_seen_at?: string
 }
 
 export interface User {
@@ -24,14 +34,57 @@ export interface User {
   created_at?: string
 }
 
+export type ActivitySize = 'duo' | 'trio' | 'group'
+export type ActivityVisibility = 'public' | 'friends' | 'invite_only'
+
+export interface Activity {
+  id: string
+  creator_id: string
+  title: string
+  description?: string
+  activity_type?: string
+  size_type: ActivitySize
+  interests?: string[]
+  start_time: string
+  end_time?: string
+  latitude: number
+  longitude: number
+  city?: string
+  max_participants: number
+  visibility: ActivityVisibility
+  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
+  created_at?: string
+}
+
+export interface Post {
+  id: string
+  author_id: string
+  text?: string
+  media_url?: string
+  media_type?: 'image' | 'video' | 'note'
+  venue_name?: string  // eg: "Cafe", "Monument"
+  location_name?: string // eg: "Paris, France"
+  city?: string
+  country?: string
+  visibility?: 'public' | 'friends'
+  created_at: string
+  user?: User
+  likes_count?: number
+  comments_count?: number
+  is_liked?: boolean
+}
+
+export interface PostComment {
+  id: string
+  post_id: string
+  author_id: string
+  text: string
+  created_at: string
+  user?: User
+}
+
 export const database = {
-  /**
-   * Syncs basic user data from Clerk to Supabase
-   */
-  /**
-   * Syncs basic user data from Clerk to Supabase
-   * Only updates display_name and avatar_url if they are currently null in Supabase
-   */
+
   async syncUser(id: string, email: string, username: string, fullName?: string | null, imageUrl?: string | null) {
     if (!id || !email) {
       console.warn('syncUser: missing required id or email')
@@ -162,6 +215,138 @@ export const database = {
       .from('users')
       .update(updateData)
       .eq('id', id)
+    
+    if (error) throw error
+  },
+
+  /**
+   * Fetches posts made by a specific user
+   */
+  async getPosts(userId: string): Promise<Post[]> {
+    if (!userId) return []
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*, user:users!posts_author_id_fkey(*)')
+      .eq('author_id', userId)
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('getPosts error:', error)
+      return [] // Return empty array on error for now
+    }
+    return data || []
+  },
+
+  /**
+   * Fetches posts where the user is tagged
+   */
+  async getTaggedPosts(userId: string): Promise<Post[]> {
+    if (!userId) return []
+    const { data, error } = await supabase
+      .from('post_tags')
+      .select('post:posts(*, user:users!posts_author_id_fkey(*))')
+      .eq('user_id', userId)
+      .order('created_at', { foreignTable: 'posts', ascending: false })
+    
+    if (error) {
+      console.error('getTaggedPosts error:', error)
+      return []
+    }
+    // Flatten the result since it's a join
+    return (data || []).map((item: any) => item.post).filter(Boolean)
+  },
+
+  /**
+   * Increments friend count for a user (placeholder for friend flow)
+   */
+  async incrementFriendsCount(userId: string) {
+    const { error } = await supabase.rpc('increment_friends_count', { user_id_arg: userId })
+    if (error) throw error
+  },
+
+  /**
+   * Increments activity count for a user (placeholder for activity flow)
+   */
+  async incrementActivitiesCount(userId: string) {
+    const { error } = await supabase.rpc('increment_activities_count', { user_id_arg: userId })
+    if (error) throw error
+  },
+
+  /**
+   * Creates a new post
+   */
+  async createPost(data: Partial<Post>) {
+    const id = Crypto.randomUUID()
+    const { error } = await supabase
+      .from('posts')
+      .insert({
+        id,
+        created_at: new Date().toISOString(),
+        ...data
+      })
+    
+    if (error) throw error
+    return id
+  },
+
+  /**
+   * Toggles a like on a post for a specific user
+   */
+  async toggleLike(postId: string, userId: string) {
+    // Try to delete first - if it succeeds, we unliked
+    const { data: deleted, error: deleteError } = await supabase
+      .from('post_likes')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', userId)
+      .select()
+    if (deleteError) throw deleteError
+    
+    if (deleted && deleted.length > 0) {
+      return false // Unliked
+    }
+    
+    // Nothing was deleted, so insert
+    const { error: insertError } = await supabase
+      .from('post_likes')
+      .insert({ post_id: postId, user_id: userId })
+    
+    if (insertError) {
+      // Handle unique constraint violation (concurrent insert)
+      if (insertError.code === '23505') return true
+      throw insertError
+    }
+    return true // Liked
+  },
+
+  /**
+   * Fetches comments for a specific post
+   */
+  async getComments(postId: string): Promise<PostComment[]> {
+    const { data, error } = await supabase
+      .from('post_comments')
+      .select('*, user:users(*)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true })
+    
+    if (error) throw error
+    return data || []
+  },
+
+  /**
+   * Adds a comment to a post
+   */
+  async addComment(postId: string, userId: string, text: string) {
+    const id = Crypto.randomUUID()
+    const { error } = await supabase
+      .from('post_comments')
+      .insert({
+        id,
+        post_id: postId,
+        author_id: userId,
+        text,
+        created_at: new Date().toISOString()
+      })
     
     if (error) throw error
   }
