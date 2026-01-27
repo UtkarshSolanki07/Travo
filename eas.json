@@ -7,6 +7,9 @@
     "default": {
       "ios": {
         "resourceClass": "large"
+      },
+      "android": {
+        "resourceClass": "large"
       }
     },
     "development": {
@@ -26,6 +29,9 @@
       "developmentClient": true,
       "distribution": "internal",
       "ios": {
+        "simulator": true
+      },
+      "android": {
         "simulator": true
       },
       "environment": "development"

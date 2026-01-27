@@ -1,6 +1,6 @@
 import { SignedIn, SignedOut, useUser } from '@clerk/clerk-expo'
 import { Link } from 'expo-router'
-import { Text, View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, TextInput, Image, Alert, Dimensions, Modal, KeyboardAvoidingView, Platform } from 'react-native'
+import { Text, View, TouchableOpacity, ScrollView, ActivityIndicator, TextInput, Image, Alert, Dimensions, Modal, KeyboardAvoidingView, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -8,8 +8,10 @@ import * as Location from 'expo-location'
 import { useLocationContext } from '@/context/LocationContext'
 import { database, User, Post, PostComment } from '@/services/database'
 import { uploadToCloudinary, getAvatarUrl, getOptimizedUrl, getVideoThumbUrl } from '@/lib/cloudinary'
-import { searchVenues, searchLocations } from '@/services/maptiler'
+import { searchVenues, searchLocations } from '@/services/googlemaps'
 import debounce from 'lodash.debounce'
+
+// Removed local global.css import as it's now in _layout.tsx
 
 const { width } = Dimensions.get('window')
 const COLUMN_WIDTH = (width - 64) / 3 // Padding and gap aware width
@@ -337,8 +339,8 @@ export default function ProfileScreen() {
 
     // Auto-fill location if it's empty
     if (!locationName) {
-      const city = place.context?.find((c: any) => c.id.startsWith('city'))?.text || ''
-      const country = place.context?.find((c: any) => c.id.startsWith('country'))?.text || ''
+      const city = place.context?.city || ''
+      const country = place.context?.country || ''
       
       if (city || country) {
         setLocationName(`${city}${city && country ? ', ' : ''}${country}`)
@@ -399,7 +401,7 @@ export default function ProfileScreen() {
       const updatedComments = await database.getComments(selectedPost.id)
       setComments(updatedComments)
       // Ideally increment comments_count in local state too
-    } catch (error) {
+    } catch {
        Alert.alert('Error', 'Failed to add comment')
     } finally {
       setSocialLoading(false)
@@ -408,125 +410,125 @@ export default function ProfileScreen() {
 
   if (clerkUser && loading) {
     return (
-      <View style={[styles.container, styles.center]}>
+      <View className="flex-1 justify-center items-center">
         <ActivityIndicator size="large" color="#6366f1" />
       </View>
     )
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView className="flex-1 bg-slate-50" contentContainerClassName="p-6 pt-[60px]">
       <SignedIn>
         {/* Header Section */}
-        <View style={styles.header}>
+        <View className="items-center mb-8">
           <TouchableOpacity 
             onPress={isEditing ? pickImage : undefined}
-            style={styles.avatarWrapper}
+            className="relative mb-4"
           >
-            <View style={styles.avatarContainer}>
+            <View className="p-1 bg-white rounded-full w-[110px] h-[110px] items-center justify-center overflow-hidden shadow-sm">
               {editingData.avatar_url || userData?.avatar_url ? (
                 <Image 
                   source={{ uri: getAvatarUrl(editingData.avatar_url || userData?.avatar_url, 200) }} 
-                  style={styles.avatar} 
+                  className="w-[100px] h-[100px] rounded-full"
                 />
               ) : (
                 <Ionicons name="person-circle" size={100} color="#6366f1" />
               )}
             </View>
             {isEditing && (
-              <View style={styles.editBadge}>
+              <View className="absolute bottom-[5px] right-[5px] bg-indigo-500 w-8 h-8 rounded-full items-center justify-center border-2 border-white">
                 <Ionicons name="camera" size={20} color="#fff" />
               </View>
             )}
           </TouchableOpacity>
           
           {isEditing ? (
-              <View style={styles.editForm}>
+              <View className="w-full px-2.5">
               <TextInput
-                style={styles.input}
+                className="bg-white border border-slate-200 rounded-xl p-3 mb-3 text-base text-slate-800"
                 placeholder="Display Name"
                 value={editingData.display_name || ''}
-                onChangeText={(text) => setEditingData({ ...editingData, display_name: text })}
+                onChangeText={(text: string) => setEditingData({ ...editingData, display_name: text })}
               />
               <TextInput
-                style={[styles.input, styles.bioInput]}
+                className="bg-white border border-slate-200 rounded-xl p-3 mb-3 text-base text-slate-800 h-20 text-top"
                 placeholder="Bio"
                 multiline
                 numberOfLines={3}
                 value={editingData.bio || ''}
-                onChangeText={(text) => setEditingData({ ...editingData, bio: text })}
+                onChangeText={(text: string) => setEditingData({ ...editingData, bio: text })}
               />
-              <View style={styles.row}>
+              <View className="flex-row mb-3">
                 <TextInput
-                  style={[styles.input, { flex: 1, marginRight: 8 }]}
+                  className="bg-white border border-slate-200 rounded-xl p-3 text-base text-slate-800 flex-1 mr-2"
                   placeholder="City"
                   value={editingData.city || ''}
-                  onChangeText={(text) => setEditingData({ ...editingData, city: text })}
+                  onChangeText={(text: string) => setEditingData({ ...editingData, city: text })}
                 />
                 <TextInput
-                  style={[styles.input, { flex: 1 }]}
+                  className="bg-white border border-slate-200 rounded-xl p-3 text-base text-slate-800 flex-1"
                   placeholder="Country"
                   value={editingData.country || ''}
-                  onChangeText={(text) => setEditingData({ ...editingData, country: text })}
+                  onChangeText={(text: string) => setEditingData({ ...editingData, country: text })}
                 />
               </View>
-              <View style={styles.editActions}>
+              <View className="flex-row gap-3 mt-2">
                 <TouchableOpacity 
-                  style={[styles.actionButton, styles.cancelButton]} 
+                  className="flex-1 py-3.5 rounded-xl items-center bg-slate-100" 
                   onPress={() => {
                     setIsEditing(false)
                     setEditingData(userData || {})
                   }}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text className="text-slate-600 font-semibold">Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.actionButton, styles.saveButton]} 
+                  className="flex-1 py-3.5 rounded-xl items-center bg-indigo-500" 
                   onPress={handleSaveProfile}
                   disabled={saving}
                 >
-                  {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Save</Text>}
+                  {saving ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Save</Text>}
                 </TouchableOpacity>
               </View>
             </View>
           ) : (
             <>
-              <Text style={styles.title}>{userData?.display_name || userData?.username || 'Traveler'}</Text>
-              <Text style={styles.locationText}>
+              <Text className="text-2xl font-bold text-slate-800 text-center">{userData?.display_name || userData?.username || 'Traveler'}</Text>
+              <Text className="text-[15px] text-slate-500 mt-1">
                 {userData?.city ? `${userData.city}, ` : ''}{userData?.country || 'No location set'}
               </Text>
               {userData?.bio && (
-                <Text style={styles.bioText}>{userData.bio}</Text>
+                <Text className="text-sm text-slate-600 text-center mt-3 px-5 leading-5">{userData.bio}</Text>
               )}
               
               {/* Stats Section */}
-              <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{friendsCount}</Text>
-                  <Text style={styles.statLabel}>Friends</Text>
+              <View className="flex-row items-center justify-center mt-6 bg-white py-3 px-6 rounded-2xl border border-slate-100">
+                <View className="items-center px-5">
+                  <Text className="text-xl font-bold text-slate-800">{friendsCount}</Text>
+                  <Text className="text-xs text-slate-500 mt-0.5 uppercase tracking-wide">Friends</Text>
                 </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{activitiesCount}</Text>
-                  <Text style={styles.statLabel}>Activities</Text>
+                <View className="w-[1px] h-[30px] bg-slate-200" />
+                <View className="items-center px-5">
+                  <Text className="text-xl font-bold text-slate-800">{activitiesCount}</Text>
+                  <Text className="text-xs text-slate-500 mt-0.5 uppercase tracking-wide">Activities</Text>
                 </View>
               </View>
               
-              <View style={styles.headerActions}>
+              <View className="flex-row gap-3 mt-3">
                 <TouchableOpacity 
-                  style={styles.editProfileBtn}
+                  className="flex-row items-center mt-3 px-4 py-2 rounded-[20px] bg-indigo-50 border border-indigo-100"
                   onPress={() => setIsEditing(true)}
                 >
                   <Ionicons name="create-outline" size={16} color="#6366f1" />
-                  <Text style={styles.editProfileText}>Edit Profile</Text>
+                  <Text className="ml-1.5 text-indigo-500 font-semibold text-sm">Edit Profile</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={[styles.editProfileBtn, styles.addPostBtn]}
+                  className="flex-row items-center mt-3 px-4 py-2 rounded-[20px] bg-indigo-500 border border-indigo-500"
                   onPress={() => setIsCreatingPost(true)}
                 >
                   <Ionicons name="add-circle-outline" size={16} color="#fff" />
-                  <Text style={[styles.editProfileText, { color: '#fff' }]}>Add Post</Text>
+                  <Text className="ml-1.5 text-white font-semibold text-sm">Add Post</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -534,9 +536,9 @@ export default function ProfileScreen() {
         </View>
 
         {/* Posts Section */}
-        <View style={styles.tabContainer}>
+        <View className="flex-row mb-4 bg-white rounded-2xl p-1.5 border border-slate-100">
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
+            className={`flex-1 flex-row items-center justify-center py-2.5 rounded-xl gap-2 ${activeTab === 'posts' ? 'bg-indigo-50' : ''}`}
             onPress={() => setActiveTab('posts')}
           >
             <Ionicons 
@@ -544,10 +546,10 @@ export default function ProfileScreen() {
               size={20} 
               color={activeTab === 'posts' ? '#6366f1' : '#64748b'} 
             />
-            <Text style={[styles.tabText, activeTab === 'posts' && styles.activeTabText]}>My Posts</Text>
+            <Text className={`text-sm font-semibold ${activeTab === 'posts' ? 'text-indigo-500' : 'text-slate-500'}`}>My Posts</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'tagged' && styles.activeTab]}
+            className={`flex-1 flex-row items-center justify-center py-2.5 rounded-xl gap-2 ${activeTab === 'tagged' ? 'bg-indigo-50' : ''}`}
             onPress={() => setActiveTab('tagged')}
           >
             <Ionicons 
@@ -555,11 +557,11 @@ export default function ProfileScreen() {
               size={20} 
               color={activeTab === 'tagged' ? '#6366f1' : '#64748b'} 
             />
-            <Text style={[styles.tabText, activeTab === 'tagged' && styles.activeTabText]}>Tagged</Text>
+            <Text className={`text-sm font-semibold ${activeTab === 'tagged' ? 'text-indigo-500' : 'text-slate-500'}`}>Tagged</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.postsGrid}>
+        <View className="flex-row flex-wrap gap-2 mb-10">
           {postsLoading ? (
             <ActivityIndicator style={{ padding: 40 }} color="#6366f1" />
           ) : (
@@ -567,7 +569,8 @@ export default function ProfileScreen() {
               (activeTab === 'posts' ? myPosts : taggedPosts).map((post) => (
                 <TouchableOpacity 
                   key={post.id} 
-                  style={styles.postItem}
+                  style={{ width: COLUMN_WIDTH, height: COLUMN_WIDTH }}
+                  className="rounded-xl overflow-hidden bg-white border border-slate-100"
                   onPress={() => openPostDetail(post)}
                 >
                   {post.media_url ? (
@@ -577,28 +580,28 @@ export default function ProfileScreen() {
                           ? getVideoThumbUrl(post.media_url, { width: 300, height: 300 })
                           : getOptimizedUrl(post.media_url, { width: 300, height: 300 })
                       }} 
-                      style={styles.postMedia} 
+                      className="w-full h-full"
                     />
                   ) : (
-                    <View style={styles.postTextOnly}>
-                      <Text numberOfLines={3} style={styles.postTextPreview}>{post.text}</Text>
+                    <View className="flex-1 p-2 bg-slate-50 justify-center">
+                      <Text numberOfLines={3} className="text-[10px] text-slate-500 text-center">{post.text}</Text>
                     </View>
                   )}
                   {post.media_type === 'video' && (
-                    <View style={styles.videoBadge}>
+                    <View className="absolute top-1.5 right-1.5 bg-black/40 w-6 h-6 rounded-full items-center justify-center">
                       <Ionicons name="play" size={14} color="#fff" />
                     </View>
                   )}
                 </TouchableOpacity>
               ))
             ) : (
-              <View style={styles.emptyGrid}>
+              <View className="w-full p-10 items-center justify-center">
                 <Ionicons 
                   name={activeTab === 'posts' ? "images-outline" : "person-add-outline"} 
                   size={48} 
                   color="#e2e8f0" 
                 />
-                <Text style={styles.emptyGridText}>
+                <Text className="mt-3 text-slate-400 text-sm">
                   {activeTab === 'posts' ? "No posts yet" : "No tagged posts"}
                 </Text>
               </View>
@@ -607,33 +610,33 @@ export default function ProfileScreen() {
         </View>
 
         {/* Interests Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Interests</Text>
+        <View className="bg-white rounded-[20px] p-5 mb-5 shadow-sm">
+          <Text className="text-lg font-semibold text-slate-800 mb-4">Interests</Text>
           
-          <View style={styles.addInterestContainer}>
+          <View className="flex-row gap-2.5 mb-4">
             <TextInput
-              style={styles.interestInput}
+              className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[15px]"
               placeholder="Add your own interest..."
               value={customInterest}
               onChangeText={setCustomInterest}
               onSubmitEditing={addCustomInterest}
             />
             <TouchableOpacity 
-              style={styles.addInterestBtn}
+              className="bg-indigo-500 w-11 h-11 rounded-xl items-center justify-center"
               onPress={addCustomInterest}
             >
               <Ionicons name="add" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-          <View style={styles.interestsContainer}>
+          <View className="flex-row flex-wrap gap-2.5">
             {/* Show selected interests first (especially custom ones) */}
             {selectedInterests.map(interest => (
               <TouchableOpacity 
                 key={interest}
-                style={[styles.interestChip, styles.interestChipSelected]}
+                className="px-3.5 py-2 rounded-[20px] bg-indigo-500 border border-indigo-500"
                 onPress={() => toggleInterest(interest)}
               >
-                <Text style={[styles.interestText, styles.interestTextSelected]}>
+                <Text className="text-white font-medium">
                   {interest}
                 </Text>
               </TouchableOpacity>
@@ -643,10 +646,10 @@ export default function ProfileScreen() {
             {INITIAL_INTERESTS.filter(i => !selectedInterests.includes(i)).map(interest => (
               <TouchableOpacity 
                 key={interest}
-                style={styles.interestChip}
+                className="px-3.5 py-2 rounded-[20px] bg-slate-100 border border-slate-200"
                 onPress={() => toggleInterest(interest)}
               >
-                <Text style={styles.interestText}>
+                <Text className="text-sm text-slate-600">
                   {interest}
                 </Text>
               </TouchableOpacity>
@@ -663,26 +666,26 @@ export default function ProfileScreen() {
         >
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalOverlay}
+            className="flex-1 bg-black/50 justify-end"
           >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Create New Post</Text>
+            <View className="bg-white rounded-t-[24px] h-[80%] p-6">
+              <View className="flex-row justify-between items-center mb-5">
+                <Text className="text-xl font-bold text-slate-800">Create New Post</Text>
                 <TouchableOpacity onPress={() => setIsCreatingPost(false)}>
                   <Ionicons name="close" size={24} color="#64748b" />
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={styles.modalBody}>
+              <ScrollView className="flex-1">
                 <TouchableOpacity 
-                  style={styles.mediaPlaceholder} 
+                  className="w-full aspect-[4/3] bg-slate-100 rounded-2xl border-2 border-slate-200 border-dashed items-center justify-center mb-5 overflow-hidden" 
                   onPress={pickPostMedia}
                 >
                   {postMedia ? (
-                    <View style={styles.previewContainer}>
-                      <Image source={{ uri: postMedia.uri }} style={styles.previewImage} />
+                    <View className="w-full h-full relative">
+                      <Image source={{ uri: postMedia.uri }} className="w-full h-full" />
                       <TouchableOpacity 
-                        style={styles.removeMediaBtn}
+                        className="absolute top-2.5 right-2.5 bg-white rounded-xl"
                         onPress={() => setPostMedia(null)}
                       >
                         <Ionicons name="close-circle" size={24} color="#ef4444" />
@@ -691,23 +694,23 @@ export default function ProfileScreen() {
                   ) : (
                     <>
                       <Ionicons name="image-outline" size={48} color="#94a3b8" />
-                      <Text style={styles.mediaPlaceholderText}>Add Photo or Video</Text>
+                      <Text className="mt-3 text-slate-500 text-[15px]">Add Photo or Video</Text>
                     </>
                   )}
                 </TouchableOpacity>
 
                 <TextInput
-                  style={[styles.input, styles.postTextInput]}
+                  className="bg-white border border-slate-200 rounded-xl p-3 mb-3 text-base text-slate-800 h-[120px] text-top pt-3"
                   placeholder="What's on your mind?..."
                   multiline
                   value={postText}
                   onChangeText={setPostText}
                 />
 
-                <View style={styles.locationRow}>
+                <View className="flex-row items-center bg-slate-50 rounded-xl px-3 border border-slate-200 mb-0">
                   <Ionicons name="location-outline" size={20} color="#6366f1" />
                   <TextInput
-                    style={[styles.input, { flex: 1, marginBottom: 0, borderWidth: 0 }]}
+                    className="flex-1 text-base text-slate-800 p-3"
                     placeholder="Place (e.g. Starburst Cafe, Eiffel Tower)"
                     value={venueName}
                     onChangeText={handleSearchVenue}
@@ -716,15 +719,15 @@ export default function ProfileScreen() {
                 </View>
 
                 {venueResults.length > 0 && (
-                  <View style={styles.searchResults}>
+                  <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
                     {venueResults.map((item, index) => (
                       <TouchableOpacity 
                         key={index} 
-                        style={styles.searchItem}
+                        className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
                         onPress={() => selectVenue(item)}
                       >
                         <Ionicons name="pin-outline" size={16} color="#64748b" />
-                        <Text style={styles.searchItemText} numberOfLines={1}>
+                        <Text className="text-[13px] text-slate-600 flex-1" numberOfLines={1}>
                           {item.place_name}
                         </Text>
                       </TouchableOpacity>
@@ -732,10 +735,10 @@ export default function ProfileScreen() {
                   </View>
                 )}
 
-                <View style={[styles.locationRow, { marginTop: 12 }]}>
+                <View className="flex-row items-center bg-slate-50 rounded-xl px-3 border border-slate-200 mt-3 mb-0">
                   <Ionicons name="globe-outline" size={20} color="#6366f1" />
                   <TextInput
-                    style={[styles.input, { flex: 1, marginBottom: 0, borderWidth: 0 }]}
+                    className="flex-1 text-base text-slate-800 p-3"
                     placeholder="Search location..."
                     value={locationName}
                     onChangeText={handleSearchLocation}
@@ -744,15 +747,15 @@ export default function ProfileScreen() {
                 </View>
 
                 {locationResults.length > 0 && (
-                  <View style={styles.searchResults}>
+                  <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
                     {locationResults.map((item, index) => (
                       <TouchableOpacity 
                         key={index} 
-                        style={styles.searchItem}
+                        className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
                         onPress={() => selectLocation(item)}
                       >
                         <Ionicons name="map-outline" size={16} color="#64748b" />
-                        <Text style={styles.searchItemText} numberOfLines={1}>
+                        <Text className="text-[13px] text-slate-600 flex-1" numberOfLines={1}>
                           {item.place_name}
                         </Text>
                       </TouchableOpacity>
@@ -761,13 +764,13 @@ export default function ProfileScreen() {
                 )}
               </ScrollView>
 
-              <View style={styles.modalFooter}>
+              <View className="pt-5 border-t border-slate-100">
                 <TouchableOpacity 
-                  style={[styles.actionButton, styles.saveButton]}
+                  className="flex-1 py-3.5 rounded-xl items-center bg-indigo-500"
                   onPress={handleCreatePost}
                   disabled={creating}
                 >
-                  {creating ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Share Post</Text>}
+                  {creating ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Share Post</Text>}
                 </TouchableOpacity>
               </View>
             </View>
@@ -781,22 +784,22 @@ export default function ProfileScreen() {
           transparent={true}
           onRequestClose={() => setIsPostDetailVisible(false)}
         >
-          <View style={styles.detailOverlay}>
-            <View style={styles.detailContent}>
-              <View style={styles.detailHeader}>
-                <View style={styles.detailAuthor}>
+          <View className="flex-1 bg-black/80 justify-center p-5">
+            <View className="bg-white rounded-[20px] max-h-[90%] overflow-hidden">
+              <View className="flex-row justify-between items-center p-4 border-b border-slate-100">
+                <View className="flex-row items-center gap-3">
                   {selectedPost?.user?.avatar_url ? (
                     <Image 
                       source={{ uri: getAvatarUrl(selectedPost.user.avatar_url, 80) }} 
-                      style={styles.authorAvatar} 
+                      className="w-10 h-10 rounded-full"
                     />
                   ) : (
                     <Ionicons name="person-circle" size={40} color="#6366f1" />
                   )}
                   <View>
-                    <Text style={styles.authorName}>{selectedPost?.user?.display_name || 'User'}</Text>
+                    <Text className="font-bold text-base text-slate-800">{selectedPost?.user?.display_name || 'User'}</Text>
                     {selectedPost?.location_name && (
-                      <Text style={styles.authorLocation}>{selectedPost.location_name}</Text>
+                      <Text className="text-xs text-indigo-500">{selectedPost.location_name}</Text>
                     )}
                   </View>
                 </View>
@@ -812,44 +815,44 @@ export default function ProfileScreen() {
                         ? getVideoThumbUrl(selectedPost.media_url, { width: 800 })
                         : getOptimizedUrl(selectedPost.media_url, { width: 800 })
                     }} 
-                    style={styles.detailMedia} 
+                    className="w-full aspect-square"
                   />
                 )}
                 
-                <View style={styles.detailInfo}>
-                  <View style={styles.socialActions}>
-                    <TouchableOpacity onPress={handleToggleLike} style={styles.socialBtn}>
+                <View className="p-4">
+                  <View className="flex-row gap-4 mb-3">
+                    <TouchableOpacity onPress={handleToggleLike} className="p-1">
                       <Ionicons 
                         name={selectedPost?.is_liked ? "heart" : "heart-outline"} 
                         size={28} 
                         color={selectedPost?.is_liked ? "#ef4444" : "#64748b"} 
                       />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.socialBtn}>
+                    <TouchableOpacity className="p-1">
                       <Ionicons name="chatbubble-outline" size={26} color="#64748b" />
                     </TouchableOpacity>
                   </View>
 
                   {selectedPost?.text && (
-                    <Text style={styles.detailText}>
+                    <Text className="text-[15px] text-slate-800 leading-5 mb-5">
                       <Text style={{ fontWeight: 'bold' }}>{selectedPost?.user?.display_name} </Text>
-                      {selectedPost.venue_name && <Text style={{ color: '#6366f1', fontWeight: '600' }}>at {selectedPost.venue_name} </Text>}
+                      {selectedPost.venue_name && <Text className="text-indigo-500 font-semibold">at {selectedPost.venue_name} </Text>}
                       {selectedPost.text}
                     </Text>
                   )}
 
-                  <View style={styles.commentsSection}>
-                    <Text style={styles.commentsTitle}>Comments</Text>
+                  <View className="border-t border-slate-100 pt-4">
+                    <Text className="text-sm font-semibold text-slate-500 mb-3">Comments</Text>
                     {comments.map(comment => (
-                      <View key={comment.id} style={styles.commentItem}>
+                      <View key={comment.id} className="flex-row gap-2.5 mb-3">
                         {comment.user?.avatar_url ? (
-                          <Image source={{ uri: getAvatarUrl(comment.user.avatar_url, 60) }} style={styles.commentAvatar} />
+                          <Image source={{ uri: getAvatarUrl(comment.user.avatar_url, 60) }} className="w-8 h-8 rounded-full" />
                         ) : (
                           <Ionicons name="person-circle" size={32} color="#94a3b8" />
                         )}
-                        <View style={styles.commentTextContainer}>
-                          <Text style={styles.commentAuthor}>{comment.user?.display_name}</Text>
-                          <Text style={styles.commentText}>{comment.text}</Text>
+                        <View className="flex-1">
+                          <Text className="font-bold text-[13px] text-slate-800">{comment.user?.display_name}</Text>
+                          <Text className="text-[13px] text-slate-600">{comment.text}</Text>
                         </View>
                       </View>
                     ))}
@@ -857,9 +860,9 @@ export default function ProfileScreen() {
                 </View>
               </ScrollView>
 
-              <View style={styles.commentInputContainer}>
+              <View className="flex-row items-center p-3 border-t border-slate-100 gap-3">
                 <TextInput
-                  style={styles.commentInput}
+                  className="flex-1 bg-slate-50 rounded-[20px] px-4 py-2 text-sm"
                   placeholder="Add a comment..."
                   value={newComment}
                   onChangeText={setNewComment}
@@ -868,7 +871,7 @@ export default function ProfileScreen() {
                    onPress={handleAddComment}
                    disabled={socialLoading || !newComment.trim()}
                 >
-                  <Text style={[styles.postCommentBtn, !newComment.trim() && { opacity: 0.5 }]}>Post</Text>
+                  <Text className={`text-indigo-500 font-bold text-sm ${!newComment.trim() ? 'opacity-50' : ''}`}>Post</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -877,16 +880,16 @@ export default function ProfileScreen() {
       </SignedIn>
 
       <SignedOut>
-        <View style={styles.loggedOutContainer}>
+        <View className="flex-1 items-center justify-center mt-[100px]">
           <Ionicons name="lock-closed" size={60} color="#64748b" />
-          <Text style={styles.title}>You are not signed in</Text>
-          <Text style={styles.subtitle}>Sign in to customize your profile and share your journey.</Text>
-          <View style={styles.authLinks}>
-            <Link href="./(auth)/sign-in" style={styles.link}>
-              <Text style={styles.linkText}>Sign in</Text>
+          <Text className="text-2xl font-bold text-slate-800 mt-4">You are not signed in</Text>
+          <Text className="text-base text-slate-500 text-center mt-2 mb-8 px-4">Sign in to customize your profile and share your journey.</Text>
+          <View className="w-full gap-4">
+            <Link href="./(auth)/sign-in" className="bg-indigo-500 p-4 rounded-xl items-center text-center">
+              <Text className="text-white font-bold">Sign in</Text>
             </Link>
-            <Link href="./(auth)/sign-up" style={styles.outlineLink}>
-              <Text style={styles.outlineLinkText}>Sign up</Text>
+            <Link href="./(auth)/sign-up" className="bg-white p-4 rounded-xl items-center text-center border border-indigo-500">
+              <Text className="text-indigo-500 font-bold">Sign up</Text>
             </Link>
           </View>
         </View>
@@ -894,589 +897,3 @@ export default function ProfileScreen() {
     </ScrollView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contentContainer: {
-    padding: 24,
-    paddingTop: 60,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  avatarWrapper: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  avatarContainer: {
-    padding: 4,
-    backgroundColor: '#fff',
-    borderRadius: 60,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    width: 110,
-    height: 110,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: 5,
-    right: 5,
-    backgroundColor: '#6366f1',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  editForm: {
-    width: '100%',
-    paddingHorizontal: 10,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
-    color: '#1e293b',
-  },
-  row: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  editActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  actionButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#f1f5f9',
-  },
-  cancelButtonText: {
-    color: '#475569',
-    fontWeight: '600',
-  },
-  saveButton: {
-    backgroundColor: '#6366f1',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  editProfileBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#eef2ff',
-    borderWidth: 1,
-    borderColor: '#e0e7ff',
-  },
-  editProfileText: {
-    marginLeft: 6,
-    color: '#6366f1',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    textAlign: 'center',
-  },
-  locationText: {
-    fontSize: 15,
-    color: '#64748b',
-    marginTop: 4,
-  },
-  bioText: {
-    fontSize: 14,
-    color: '#475569',
-    textAlign: 'center',
-    marginTop: 12,
-    paddingHorizontal: 20,
-    lineHeight: 20,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 24,
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  statItem: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1e293b',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#e2e8f0',
-  },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 16,
-  },
-  bioInput: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  addInterestContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
-  },
-  interestInput: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-  },
-  addInterestBtn: {
-    backgroundColor: '#6366f1',
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  interestsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  interestChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f1f5f9',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  interestChipSelected: {
-    backgroundColor: '#6366f1',
-    borderColor: '#6366f1',
-  },
-  interestText: {
-    fontSize: 14,
-    color: '#475569',
-  },
-  interestTextSelected: {
-    color: '#fff',
-    fontWeight: '500',
-  },
-  buttonContainer: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  loggedOutContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 100,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 32,
-  },
-  authLinks: {
-    width: '100%',
-    gap: 15,
-  },
-  link: {
-    backgroundColor: '#6366f1',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    textAlign: 'center',
-  },
-  linkText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  outlineLink: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    textAlign: 'center',
-    borderWidth: 1,
-    borderColor: '#6366f1',
-  },
-  outlineLinkText: {
-    color: '#6366f1',
-    fontWeight: 'bold',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 8,
-  },
-  activeTab: {
-    backgroundColor: '#eef2ff',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  activeTabText: {
-    color: '#6366f1',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  addPostBtn: {
-    backgroundColor: '#6366f1',
-    borderColor: '#6366f1',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '80%',
-    padding: 24,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1e293b',
-  },
-  modalBody: {
-    flex: 1,
-  },
-  mediaPlaceholder: {
-    width: '100%',
-    aspectRatio: 4/3,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
-  mediaPlaceholderText: {
-    marginTop: 12,
-    color: '#64748b',
-    fontSize: 15,
-  },
-  previewContainer: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
-  },
-  removeMediaBtn: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-  },
-  postTextInput: {
-    height: 120,
-    textAlignVertical: 'top',
-    paddingTop: 12,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  searchResults: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    overflow: 'hidden',
-  },
-  searchItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    gap: 10,
-  },
-  searchItemText: {
-    fontSize: 13,
-    color: '#475569',
-    flex: 1,
-  },
-  modalFooter: {
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-  },
-  detailOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  detailContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    maxHeight: '90%',
-    overflow: 'hidden',
-  },
-  detailHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  detailAuthor: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  authorAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  authorName: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#1e293b',
-  },
-  authorLocation: {
-    fontSize: 12,
-    color: '#6366f1',
-  },
-  detailMedia: {
-    width: '100%',
-    aspectRatio: 1,
-  },
-  detailInfo: {
-    padding: 16,
-  },
-  socialActions: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 12,
-  },
-  socialBtn: {
-    padding: 4,
-  },
-  detailText: {
-    fontSize: 15,
-    color: '#1e293b',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  commentsSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 16,
-  },
-  commentsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
-    marginBottom: 12,
-  },
-  commentItem: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
-  },
-  commentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  commentTextContainer: {
-    flex: 1,
-  },
-  commentAuthor: {
-    fontWeight: 'bold',
-    fontSize: 13,
-    color: '#1e293b',
-  },
-  commentText: {
-    fontSize: 13,
-    color: '#475569',
-  },
-  commentInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    gap: 12,
-  },
-  commentInput: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  postCommentBtn: {
-    color: '#6366f1',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  postsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 40,
-  },
-  postItem: {
-    width: COLUMN_WIDTH,
-    height: COLUMN_WIDTH,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  postMedia: {
-    width: '100%',
-    height: '100%',
-  },
-  postTextOnly: {
-    flex: 1,
-    padding: 8,
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
-  },
-  postTextPreview: {
-    fontSize: 10,
-    color: '#64748b',
-    textAlign: 'center',
-  },
-  videoBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyGrid: {
-    width: '100%',
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyGridText: {
-    marginTop: 12,
-    color: '#94a3b8',
-    fontSize: 14,
-  },
-});

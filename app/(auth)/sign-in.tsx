@@ -1,6 +1,6 @@
 import { useSignIn, useOAuth } from '@clerk/clerk-expo'
 import { Link, useRouter } from 'expo-router'
-import { Text, TextInput, TouchableOpacity, View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native'
+import { Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native'
 import React from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import * as WebBrowser from 'expo-web-browser'
@@ -67,80 +67,80 @@ export default function Page() {
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      className="flex-1 bg-slate-50"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
+      <ScrollView contentContainerClassName="flex-grow justify-center p-6">
+        <View className="items-center mb-10">
+          <View className="w-16 h-16 rounded-2xl bg-indigo-50 justify-center items-center mb-4">
             <Ionicons name="airplane" size={40} color="#6366f1" />
           </View>
-          <Text style={styles.title}>Travo</Text>
-          <Text style={styles.subtitle}>Welcome back! Please sign in to continue.</Text>
+          <Text className="text-3xl font-bold text-slate-800 mb-2">Travo</Text>
+          <Text className="text-base text-slate-500 text-center">Welcome back! Please sign in to continue.</Text>
         </View>
 
-        <View style={styles.form}>
+        <View className="bg-white rounded-3xl p-6 shadow-sm">
           {error ? (
-            <View style={styles.errorContainer}>
+            <View className="flex-row items-center bg-red-50 p-3 rounded-xl mb-4 gap-2">
               <Ionicons name="alert-circle" size={20} color="#ef4444" />
-              <Text style={styles.errorText}>{error}</Text>
+              <Text className="text-red-700 text-sm flex-1">{error}</Text>
             </View>
           ) : null}
 
-          <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+          <View className="flex-row items-center bg-slate-100 rounded-xl mb-4 px-4">
+            <Ionicons name="mail-outline" size={20} color="#94a3b8" style={{ marginRight: 12 }} />
             <TextInput
               autoCapitalize="none"
               value={emailAddress}
               placeholder="Email address"
               placeholderTextColor="#94a3b8"
               onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
-              style={styles.input}
+              className="flex-1 h-12 text-base text-slate-800"
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+          <View className="flex-row items-center bg-slate-100 rounded-xl mb-4 px-4">
+            <Ionicons name="lock-closed-outline" size={20} color="#94a3b8" style={{ marginRight: 12 }} />
             <TextInput
               value={password}
               placeholder="Password"
               placeholderTextColor="#94a3b8"
               secureTextEntry={true}
               onChangeText={(password) => setPassword(password)}
-              style={styles.input}
+              className="flex-1 h-12 text-base text-slate-800"
             />
           </View>
 
           <TouchableOpacity 
             onPress={onSignInPress} 
-            style={[styles.button, loading && styles.buttonDisabled]}
+            className={`bg-indigo-500 h-[52px] rounded-xl justify-center items-center mt-2 shadow-sm ${loading ? 'bg-indigo-300' : ''}`}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
+              <Text className="text-white text-base font-semibold">Sign In</Text>
             )}
           </TouchableOpacity>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
+          <View className="flex-row items-center my-5">
+            <View className="flex-1 h-[1px] bg-slate-200" />
+            <Text className="mx-2.5 text-slate-400 text-xs font-medium">OR</Text>
+            <View className="flex-1 h-[1px] bg-slate-200" />
           </View>
 
           <TouchableOpacity 
             onPress={onGoogleSignInPress} 
-            style={styles.googleButton}
+            className="flex-row bg-white h-[52px] rounded-xl justify-center items-center border border-slate-200"
           >
-            <Ionicons name="logo-google" size={20} color="#1e293b" style={styles.googleIcon} />
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
+            <Ionicons name="logo-google" size={20} color="#1e293b" style={{ marginRight: 10 }} />
+            <Text className="text-slate-800 text-base font-semibold">Continue with Google</Text>
           </TouchableOpacity>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don&apos;t have an account?</Text>
+          <View className="flex-row justify-center items-center mt-6 gap-2">
+            <Text className="text-slate-500 text-sm">Don&apos;t have an account?</Text>
             <Link href="./sign-up" asChild>
               <TouchableOpacity>
-                <Text style={styles.linkText}>Sign up</Text>
+                <Text className="text-indigo-500 text-sm font-semibold">Sign up</Text>
               </TouchableOpacity>
             </Link>
           </View>
@@ -149,151 +149,3 @@ export default function Page() {
     </KeyboardAvoidingView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: '#f0f4ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-  },
-  form: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 16,
-    gap: 8,
-  },
-  errorText: {
-    color: '#b91c1c',
-    fontSize: 14,
-    flex: 1,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    height: 48,
-    fontSize: 16,
-    color: '#1e293b',
-  },
-  button: {
-    backgroundColor: '#6366f1',
-    height: 52,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    backgroundColor: '#a5b4fc',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e2e8f0',
-  },
-  dividerText: {
-    marginHorizontal: 10,
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  googleButton: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    height: 52,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  googleIcon: {
-    marginRight: 10,
-  },
-  googleButtonText: {
-    color: '#1e293b',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 24,
-    gap: 8,
-  },
-  footerText: {
-    color: '#64748b',
-    fontSize: 14,
-  },
-  linkText: {
-    color: '#6366f1',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-})

@@ -3,7 +3,6 @@ import { Link, useRouter } from 'expo-router'
 import {
   Text,
   View,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
@@ -169,27 +168,27 @@ export default function SettingsScreen() {
 
   if (clerkUser && loading) {
     return (
-      <View style={[styles.container, styles.center]}>
+      <View className="flex-1 justify-center items-center bg-slate-50">
         <ActivityIndicator size="large" color="#6366f1" />
       </View>
     )
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView className="flex-1 bg-slate-50" contentContainerClassName="p-6 pt-[60px]">
       <SignedIn>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text className="text-3xl font-bold text-slate-800 mb-6">Settings</Text>
 
         {/* Privacy & Security */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Privacy & Security</Text>
+        <View className="bg-white rounded-[20px] p-5 mb-5 shadow-sm">
+          <Text className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-4">Privacy & Security</Text>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
+          <View className="flex-row items-center justify-between py-3">
+            <View className="flex-row items-center flex-1 mr-4">
               <Ionicons name="location-outline" size={24} color="#6366f1" />
-              <View style={styles.textContainer}>
-                <Text style={styles.settingLabel}>Share My Location</Text>
-                <Text style={styles.settingDescription}>
+              <View className="ml-4 flex-1">
+                <Text className="text-base font-semibold text-slate-800">Share My Location</Text>
+                <Text className="text-[13px] text-slate-500 mt-0.5">
                   Share your live location while the app is open. You can turn this off anytime.
                 </Text>
               </View>
@@ -202,42 +201,40 @@ export default function SettingsScreen() {
             />
           </View>
 
-          <View style={styles.infoRow}>
+          <View className="flex-row items-start mt-2">
             <Ionicons name="shield-checkmark-outline" size={18} color="#64748b" />
-            <Text style={styles.infoText}>
+            <Text className="ml-2 text-xs text-slate-400 flex-1">
               Your approximate location is shared to nearby users, not your exact address.
             </Text>
           </View>
         </View>
 
         {/* Account */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Details</Text>
+        <View className="bg-white rounded-[20px] p-5 mb-5 shadow-sm">
+          <Text className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-4">Account Details</Text>
           
           {client?.sessions?.map((session) => (
             <TouchableOpacity 
               key={session.id} 
-              style={[
-                styles.accountRow,
-                session.user?.id === clerkUser?.id && styles.activeAccountRow
-              ]}
+              className={`flex-row items-center justify-between py-3 border-b border-slate-100 ${
+                session.user?.id === clerkUser?.id ? 'bg-indigo-50/50 rounded-xl px-3 -mx-3' : ''
+              }`}
               onPress={() => session.user?.id !== clerkUser?.id && handleSwitchAccount(session.id)}
             >
-              <View style={styles.settingInfo}>
+              <View className="flex-row items-center flex-1 mr-4">
                 <Ionicons 
                   name={session.user?.id === clerkUser?.id ? "person" : "person-outline"} 
                   size={24} 
                   color={session.user?.id === clerkUser?.id ? "#6366f1" : "#64748b"} 
                 />
-                <View style={styles.textContainer}>
-                  <Text style={[
-                    styles.settingLabel,
-                    session.user?.id === clerkUser?.id && styles.activeAccountLabel
-                  ]}>
+                <View className="ml-4 flex-1">
+                  <Text className={`text-base font-semibold ${
+                    session.user?.id === clerkUser?.id ? 'text-indigo-500' : 'text-slate-800'
+                  }`}>
                     {session.user?.fullName || session.user?.username || 'User'}
                     {session.user?.id === clerkUser?.id && " (Active)"}
                   </Text>
-                  <Text style={styles.settingDescription}>
+                  <Text className="text-[13px] text-slate-500 mt-0.5">
                     {session.user?.primaryEmailAddress?.emailAddress}
                   </Text>
                 </View>
@@ -248,25 +245,25 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           ))}
 
-          <TouchableOpacity style={styles.addAccountButton} onPress={handleCreateNewAccount}>
+          <TouchableOpacity className="flex-row items-center gap-2 mt-4 py-2" onPress={handleCreateNewAccount}>
             <Ionicons name="person-add-outline" size={20} color="#6366f1" />
-            <Text style={styles.addAccountText}>Add New Account</Text>
+            <Text className="text-[15px] font-semibold text-indigo-500">Add New Account</Text>
           </TouchableOpacity>
         </View>
 
         {/* Preferences */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
+        <View className="bg-white rounded-[20px] p-5 mb-5 shadow-sm">
+          <Text className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-4">Preferences</Text>
 
           <TouchableOpacity
-            style={styles.settingRow}
+            className="flex-row items-center justify-between py-3"
             onPress={() => router.push('/profile')}
           >
-            <View style={styles.settingInfo}>
+            <View className="flex-row items-center flex-1 mr-4">
               <Ionicons name="star-outline" size={24} color="#6366f1" />
-              <View style={styles.textContainer}>
-                <Text style={styles.settingLabel}>Interests</Text>
-                <Text style={styles.settingDescription}>
+              <View className="ml-4 flex-1">
+                <Text className="text-base font-semibold text-slate-800">Interests</Text>
+                <Text className="text-[13px] text-slate-500 mt-0.5">
                   Choose what you like so we can suggest better activities and people.
                 </Text>
               </View>
@@ -276,162 +273,23 @@ export default function SettingsScreen() {
         </View>
 
         {/* Sign out */}
-        <View style={styles.section}>
-          <View style={styles.buttonContainer}>
+        <View className="bg-white rounded-[20px] p-5 mb-5 shadow-sm">
+          <View className="rounded-xl overflow-hidden">
             <SignOutButton />
           </View>
         </View>
       </SignedIn>
 
       <SignedOut>
-        <View style={styles.loggedOutContainer}>
+        <View className="flex-1 items-center justify-center mt-[100px]">
           <Ionicons name="settings-outline" size={60} color="#64748b" />
-          <Text style={styles.title}>Settings Unavailable</Text>
-          <Text style={styles.subtitle}>Please sign in to access your settings.</Text>
-          <Link href="./(auth)/sign-in" style={styles.link}>
-            <Text style={styles.linkText}>Sign in</Text>
+          <Text className="text-2xl font-bold text-slate-800 mt-4">Settings Unavailable</Text>
+          <Text className="text-base text-slate-500 text-center my-4">Please sign in to access your settings.</Text>
+          <Link href="./(auth)/sign-in" className="bg-indigo-500 px-8 py-3 rounded-xl">
+            <Text className="text-white font-bold text-base">Sign in</Text>
           </Link>
         </View>
       </SignedOut>
     </ScrollView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contentContainer: {
-    padding: 24,
-    paddingTop: 60,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 24,
-  },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 16,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  settingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 16,
-  },
-  textContainer: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
-  },
-  settingDescription: {
-    fontSize: 13,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 8,
-  },
-  infoText: {
-    marginLeft: 8,
-    fontSize: 12,
-    color: '#94a3b8',
-    flex: 1,
-  },
-  buttonContainer: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  loggedOutContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 100,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginTop: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    marginVertical: 16,
-  },
-  link: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  linkText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  accountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  activeAccountRow: {
-    backgroundColor: '#f0f4ff',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginHorizontal: -12,
-  },
-  activeAccountLabel: {
-    color: '#6366f1',
-  },
-  addAccountButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 16,
-    paddingVertical: 8,
-  },
-  addAccountText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#6366f1',
-  },
-})

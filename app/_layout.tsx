@@ -1,4 +1,5 @@
 import 'react-native-url-polyfill/auto'
+import "../global.css"
 import { ClerkProvider, useAuth, useUser } from '@clerk/clerk-expo'
 import { tokenCache } from '@clerk/clerk-expo/token-cache'
 import { Slot, useRouter, useSegments } from 'expo-router'
@@ -17,7 +18,7 @@ function InitialLayout() {
   useEffect(() => {
     if (!isLoaded) return
 
-    const inAuthGroup = segments[0] === '(auth)'
+    const inAuthGroup = segments[0] === `(auth)`
 
     if (isSignedIn && inAuthGroup) {
       // Sync user data to Supabase
@@ -35,7 +36,7 @@ function InitialLayout() {
       // Removed redirection to '/' as it prevents adding additional accounts via (auth) screens
     } else if (!isSignedIn && !inAuthGroup) {
       // Redirect to sign-in if not signed in and trying to access app
-      router.replace('/sign-in')
+      router.replace(`./(auth)/sign-in`)
     }
   }, [isSignedIn, isLoaded, segments, router, user])
 

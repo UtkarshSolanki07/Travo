@@ -1,7 +1,6 @@
-import { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
-  StyleSheet,
   TextInput,
   FlatList,
   Text,
@@ -10,11 +9,9 @@ import {
 } from "react-native";
 
 import MapComponent, { UrlTile, Marker } from "@/components/MapComponent";
-import { searchAll, reverseGeocode } from "../../services/maptiler";
+import { searchAll, reverseGeocode } from "../../services/googlemaps";
 import debounce from "lodash.debounce";
 import { useLocationContext } from "@/context/LocationContext";
-
-const MAP_KEY = process.env.EXPO_PUBLIC_MAPTILER_KEY;
 
 export default function Index() {
   const mapRef = useRef<any>(null);
@@ -119,14 +116,14 @@ export default function Index() {
   };
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1">
       <MapComponent 
         ref={mapRef} 
-        style={styles.map} 
+        style={{ flex: 1 }} 
         onLongPress={handleLongPress}
       >
         <UrlTile
-          urlTemplate={`https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAP_KEY}`}
+          urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
           maximumZ={19}
         />
 
@@ -142,12 +139,12 @@ export default function Index() {
       </MapComponent>
 
       {/* 🔍 Search Box */}
-      <View style={styles.searchBox}>
+      <View className="absolute top-[50px] w-[90%] self-center bg-white rounded-xl p-2.5 shadow-md">
         <TextInput
           placeholder="Search for a place, cafe, etc..."
           value={query}
           onChangeText={handleSearch}
-          style={styles.input}
+          className="h-[46px] border-b border-slate-200 px-2.5 mb-1.5"
         />
 
         <FlatList
@@ -156,7 +153,7 @@ export default function Index() {
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.item}
+              className="py-2.5 border-b border-slate-100"
               onPress={() => handleSelect(item)}
             >
               <Text numberOfLines={2}>{item.place_name}</Text>
@@ -167,33 +164,3 @@ export default function Index() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { flex: 1 },
-
-  searchBox: {
-    position: "absolute",
-    top: 50,
-    width: "90%",
-    alignSelf: "center",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 10,
-    elevation: 5,
-  },
-
-  input: {
-    height: 46,
-    borderBottomWidth: 1,
-    borderColor: "#ddd",
-    paddingHorizontal: 10,
-    marginBottom: 5,
-  },
-
-  item: {
-    paddingVertical: 10,
-    borderBottomWidth: 0.5,
-    borderColor: "#eee",
-  },
-});
