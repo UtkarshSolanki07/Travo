@@ -882,10 +882,10 @@ export default function ProfileScreen() {
           <Text style={styles.title}>You are not signed in</Text>
           <Text style={styles.subtitle}>Sign in to customize your profile and share your journey.</Text>
           <View style={styles.authLinks}>
-            <Link href="/sign-in" style={styles.link}>
+            <Link href="./(auth)/sign-in" style={styles.link}>
               <Text style={styles.linkText}>Sign in</Text>
             </Link>
-            <Link href="/sign-up" style={styles.outlineLink}>
+            <Link href="./(auth)/sign-up" style={styles.outlineLink}>
               <Text style={styles.outlineLinkText}>Sign up</Text>
             </Link>
           </View>

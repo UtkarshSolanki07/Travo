@@ -164,7 +164,7 @@ export default function SettingsScreen() {
   }
 
   const handleCreateNewAccount = () => {
-    router.push('/sign-up')
+    router.push('./(auth)/sign-up')
   }
 
   if (clerkUser && loading) {
@@ -288,7 +288,7 @@ export default function SettingsScreen() {
           <Ionicons name="settings-outline" size={60} color="#64748b" />
           <Text style={styles.title}>Settings Unavailable</Text>
           <Text style={styles.subtitle}>Please sign in to access your settings.</Text>
-          <Link href="/sign-in" style={styles.link}>
+          <Link href="./(auth)/sign-in" style={styles.link}>
             <Text style={styles.linkText}>Sign in</Text>
           </Link>
         </View>

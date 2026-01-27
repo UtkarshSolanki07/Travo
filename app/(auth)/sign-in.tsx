@@ -138,7 +138,7 @@ export default function Page() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don&apos;t have an account?</Text>
-            <Link href="/sign-up" asChild>
+            <Link href="./sign-up" asChild>
               <TouchableOpacity>
                 <Text style={styles.linkText}>Sign up</Text>
               </TouchableOpacity>

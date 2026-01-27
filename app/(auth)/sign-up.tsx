@@ -213,7 +213,7 @@ export default function SignUpScreen() {
 
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Already have an account?</Text>
-                <Link href="/sign-in" asChild>
+                <Link href="./sign-in" asChild>
                   <TouchableOpacity>
                     <Text style={styles.linkText}>Sign in</Text>
                   </TouchableOpacity>
