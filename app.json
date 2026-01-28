@@ -10,7 +10,7 @@
     "updates": {
       "enabled": false
     },
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.utkarsh07.travo",
@@ -29,7 +29,10 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "config": {},
+      "config": {
+        "googleMaps": {
+          "apiKey": "process.env.GOOGLE_MAPS_API_KEY"
+      }},
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
@@ -54,8 +57,7 @@
           }
         }
       ],
-      "expo-font",
-      "@maplibre/maplibre-react-native"
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,

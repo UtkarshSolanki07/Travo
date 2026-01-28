@@ -8,7 +8,7 @@ import * as Location from 'expo-location'
 import { useLocationContext } from '@/context/LocationContext'
 import { database, User, Post, PostComment } from '@/services/database'
 import { uploadToCloudinary, getAvatarUrl, getOptimizedUrl, getVideoThumbUrl } from '@/lib/cloudinary'
-import { searchVenues, searchLocations } from '@/services/maptiler'
+import { searchVenues, searchLocations } from '@/services/geoapify'
 import debounce from 'lodash.debounce'
 
 const { width } = Dimensions.get('window')
