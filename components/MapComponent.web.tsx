@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { View, Text, StyleSheet, ViewProps } from 'react-native';
 
+
 export interface MapComponentProps extends ViewProps {
   children?: React.ReactNode;
   onLongPress?: (event: any) => void;

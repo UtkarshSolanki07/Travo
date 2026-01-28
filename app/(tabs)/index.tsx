@@ -1,18 +1,18 @@
-import { useRef, useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
-  StyleSheet,
-  TextInput,
   FlatList,
-  Text,
-  TouchableOpacity,
   Keyboard,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-import MapComponent, { UrlTile, Marker } from "@/components/MapComponent";
-import { searchAll, reverseGeocode } from "../../services/maptiler";
-import debounce from "lodash.debounce";
+import MapComponent, { Marker } from "@/components/MapComponent";
 import { useLocationContext } from "@/context/LocationContext";
+import debounce from "lodash.debounce";
+import { reverseGeocode, searchAll } from "../../services/geoapify";
 
 const MAP_KEY = process.env.EXPO_PUBLIC_MAPTILER_KEY;
 
@@ -41,7 +41,7 @@ export default function Index() {
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         },
-        1000
+        1000,
       );
     }
   }, [userLocation]);
@@ -54,7 +54,7 @@ export default function Index() {
       } else {
         setResults([]);
       }
-    }, 500)
+    }, 500),
   ).current;
 
   const handleSearch = (text: string) => {
@@ -69,7 +69,7 @@ export default function Index() {
 
   const handleSelect = (place: any) => {
     if (!place.center || place.center.length < 2) {
-      console.warn('Invalid place data:', place);
+      console.warn("Invalid place data:", place);
       return;
     }
     const [lon, lat] = place.center;
@@ -86,7 +86,7 @@ export default function Index() {
         latitudeDelta: 0.3,
         longitudeDelta: 0.3,
       },
-      800
+      800,
     );
 
     setResults([]);
@@ -120,16 +120,11 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <MapComponent 
-        ref={mapRef} 
-        style={styles.map} 
+      <MapComponent
+        ref={mapRef}
+        style={styles.map}
         onLongPress={handleLongPress}
       >
-        <UrlTile
-          urlTemplate={`https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAP_KEY}`}
-          maximumZ={19}
-        />
-
         {selectedPlace && (
           <Marker
             coordinate={{

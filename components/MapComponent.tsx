@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import MapView, { UrlTile, Marker, MapViewProps } from 'react-native-maps';
 
+
 export interface MapComponentProps extends MapViewProps {
   children?: React.ReactNode;
 }
