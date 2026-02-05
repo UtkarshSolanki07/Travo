@@ -19,6 +19,7 @@
     "@react-navigation/native": "^7.1.8",
     "@supabase/supabase-js": "^2.91.0",
     "expo": "~54.0.31",
+    "expo-audio": "~1.1.1",
     "expo-auth-session": "~7.0.10",
     "expo-constants": "~18.0.13",
     "expo-crypto": "^15.0.8",
@@ -35,6 +36,7 @@
     "expo-status-bar": "~3.0.9",
     "expo-symbols": "~1.0.8",
     "expo-system-ui": "~6.0.9",
+    "expo-video": "~3.0.15",
     "expo-web-browser": "^15.0.10",
     "lodash.debounce": "^4.0.8",
     "nativewind": "^4.2.1",
@@ -50,6 +52,7 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
+    "@types/google.maps": "^3.58.1",
     "@types/lodash.debounce": "^4.0.9",
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
