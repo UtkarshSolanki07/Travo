@@ -7,9 +7,14 @@ export interface MapComponentProps extends MapViewProps {
 }
 
 const MapComponent = forwardRef<MapView, MapComponentProps>((props, ref) => {
+  const { style, children, ...rest } = props;
   return (
-    <MapView ref={ref} {...props}>
-      {props.children}
+    <MapView
+      ref={ref}
+      {...rest}
+      style={[{ flex: 1 }, style]}
+    >
+      {children}
     </MapView>
   );
 });
