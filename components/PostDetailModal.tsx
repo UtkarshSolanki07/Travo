@@ -32,6 +32,26 @@ interface PostDetailModalProps {
   onEditPost: () => void;
 }
 
+/**
+ * Render a modal displaying a post with its media, like/comment actions, and a threaded comments UI.
+ *
+ * @param visible - Whether the modal is visible
+ * @param post - The post to display (may be null/undefined)
+ * @param comments - Array of comments for the post
+ * @param newComment - Current value of the composer input for a new comment
+ * @param socialLoading - Whether comment/post actions are in a loading state (disables actions)
+ * @param videoPlayer - Optional video player instance used when the post contains a video
+ * @param currentUserId - ID of the currently authenticated user (used to determine ownership)
+ * @param onClose - Callback invoked to close the modal
+ * @param onToggleLike - Callback invoked when the like button is pressed
+ * @param onCommentChange - Callback invoked with updated text for the new comment input
+ * @param onAddComment - Callback invoked to submit a new comment
+ * @param onDeleteComment - Callback invoked to delete a comment (receives comment id)
+ * @param onReplyToComment - Callback invoked to post a reply to a comment (receives comment id and reply text)
+ * @param onDeletePost - Callback invoked to delete the post
+ * @param onEditPost - Callback invoked to start editing the post
+ * @returns The post detail modal component element
+ */
 export default function PostDetailModal({
   visible,
   post,

@@ -15,6 +15,16 @@ interface InterestsSectionProps {
   onToggleInterest: (interest: string) => void
 }
 
+/**
+ * Render an interests selection UI with a custom-interest input, an add button, and toggleable interest chips.
+ *
+ * @param selectedInterests - Currently selected interest strings displayed as filled chips
+ * @param customInterest - Current value of the custom interest text input
+ * @param onCustomInterestChange - Callback invoked with the new text when the custom input changes
+ * @param onAddCustomInterest - Callback invoked to add the current custom interest
+ * @param onToggleInterest - Callback invoked with an interest string to toggle its selection state
+ * @returns The component UI as a JSX element
+ */
 export default function InterestsSection({
   selectedInterests,
   customInterest,

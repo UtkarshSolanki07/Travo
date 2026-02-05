@@ -20,6 +20,13 @@ import PostsGrid from "@/components/PostsGrid";
 import PostsTabs from "@/components/PostsTabs";
 import ProfileHeader from "@/components/ProfileHeader";
 
+/**
+ * Render the user's profile screen with profile details, interests, posts, and post creation/edit flows.
+ *
+ * Manages loading and updating profile and posts data, interest selection, media picking and upload, debounced venue/location searches (with optional device location), video playback for create/edit/detail views, and social interactions (likes, comments). Shows an authenticated UI when signed in and a logged-out view otherwise.
+ *
+ * @returns The profile screen JSX element composed of the profile header, edit form, posts tabs and grid, interests section, create/edit post modals, post detail modal, and a logged-out view when no user is signed in.
+ */
 export default function ProfileScreen() {
   const { user: clerkUser } = useUser();
   const { userLocation, updateLocation } = useLocationContext();

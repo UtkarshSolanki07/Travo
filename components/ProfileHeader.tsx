@@ -14,6 +14,19 @@ interface ProfileHeaderProps {
   editingData?: Partial<User>
 }
 
+/**
+ * Render a user's profile header with avatar, basic info, social counts, and action buttons; switches into an avatar-focused edit presentation when editing.
+ *
+ * @param userData - The current persisted user data to display when not editing; may be null.
+ * @param friendsCount - Number of friends to show in the stats card.
+ * @param activitiesCount - Number of activities to show in the stats card.
+ * @param isEditing - When true, the header shows the editing state (avatar editable and other profile details hidden).
+ * @param onEditPress - Callback invoked when the "Edit Profile" button is pressed.
+ * @param onCreatePostPress - Callback invoked when the "Add Post" button is pressed.
+ * @param onAvatarPress - Optional callback invoked when the avatar is pressed while in editing mode.
+ * @param editingData - Optional partial user data used to preview changes while editing.
+ * @returns The rendered profile header element.
+ */
 export default function ProfileHeader({
   userData,
   friendsCount,
