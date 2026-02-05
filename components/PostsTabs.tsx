@@ -6,6 +6,13 @@ interface PostsTabsProps {
   onTabChange: (tab: 'posts' | 'tagged') => void
 }
 
+/**
+ * Renders a two-option tab switcher for selecting between "My Posts" and "Tagged".
+ *
+ * @param activeTab - Current active tab, either 'posts' or 'tagged'.
+ * @param onTabChange - Callback invoked with the selected tab key ('posts' | 'tagged') when a tab is pressed.
+ * @returns The tab control as a JSX element.
+ */
 export default function PostsTabs({ activeTab, onTabChange }: PostsTabsProps) {
   return (
     <View className="flex-row mb-4 bg-white rounded-2xl p-1.5 border border-slate-100">

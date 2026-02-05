@@ -14,6 +14,19 @@ interface PostsGridProps {
   onPostPress: (post: Post) => void
 }
 
+/**
+ * Render a responsive 3-column grid of post tiles, handling loading and empty states.
+ *
+ * Displays an activity indicator when loading, an icon and message when `posts` is empty,
+ * and a grid of touchable post tiles otherwise. Video posts render a thumbnail with a play badge.
+ *
+ * @param posts - Array of posts to display
+ * @param loading - When true, shows a centered loading indicator instead of the grid
+ * @param emptyMessage - Message shown when there are no posts
+ * @param emptyIcon - Icon name shown above the empty message
+ * @param onPostPress - Callback invoked with a post when its tile is pressed
+ * @returns A JSX element containing the posts grid, empty state, or loading indicator
+ */
 export default function PostsGrid({
   posts,
   loading,

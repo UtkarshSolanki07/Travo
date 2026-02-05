@@ -9,6 +9,16 @@ interface EditProfileFormProps {
   onCancel: () => void
 }
 
+/**
+ * Render a controlled edit profile form for display name, bio, city, and country with Cancel and Save actions.
+ *
+ * @param editingData - Partial user fields used to populate the form inputs.
+ * @param saving - Whether a save operation is in progress; disables the Save button and shows a loading indicator when true.
+ * @param onDataChange - Invoked with the updated partial user data whenever any input changes.
+ * @param onSave - Called when the Save action is pressed.
+ * @param onCancel - Called when the Cancel action is pressed.
+ * @returns A React element containing inputs for display name, bio, city, and country, plus Cancel and Save controls.
+ */
 export default function EditProfileForm({
   editingData,
   saving,
