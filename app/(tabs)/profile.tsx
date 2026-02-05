@@ -520,7 +520,7 @@ export default function ProfileScreen() {
       setComments(updatedComments);
       Alert.alert("Success", "Comment deleted");
     } catch (error) {
-      Alert.alert("Error", "Failed to delete comment");
+      Alert.alert("Error", "Error deleting comment");
       console.log(error);
     }
   };
