@@ -13,11 +13,15 @@ export default function LoggedOutView() {
         Sign in to customize your profile and share your journey.
       </Text>
       <View className="w-full gap-4">
-        <Link href="/sign-in" className="bg-indigo-500 p-4 rounded-xl items-center">
-          <Text className="text-white font-bold">Sign in</Text>
+        <Link href="/sign-in">
+          <Text className="bg-indigo-500 p-4 rounded-xl items-center text-white font-bold">
+            Sign in
+          </Text>
         </Link>
-        <Link href="/sign-up" className="bg-white p-4 rounded-xl items-center border border-indigo-500">
-          <Text className="text-indigo-500 font-bold">Sign up</Text>
+        <Link href="/sign-up">
+          <Text className="bg-white p-4 rounded-xl items-center border border-indigo-500 text-indigo-500 font-bold">
+            Sign up
+          </Text>
         </Link>
       </View>
     </View>

@@ -283,7 +283,7 @@ export default function ProfileScreen() {
 
   const pickPostMedia = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       quality: 0.8,
     });
@@ -513,10 +513,10 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!clerkUser) return;
+    if (!clerkUser || !selectedPost) return;
     try {
       await database.deleteComment(commentId, clerkUser.id);
-      const updatedComments = await database.getComments(selectedPost!.id);
+      const updatedComments = await database.getComments(selectedPost.id);
       setComments(updatedComments);
       Alert.alert("Success", "Comment deleted");
     } catch (error) {

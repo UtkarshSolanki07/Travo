@@ -17,10 +17,10 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Travo needs your location to show you on the map and find nearby interests.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Travo uses your location to keep your journey updated for your friends, even in the background.",
-        "NSLocationAlwaysUsageDescription": "Travo uses your location to keep your journey updated for your friends."
-      },"config": {
-        
-      }
+        "NSLocationAlwaysUsageDescription": "Travo uses your location to keep your journey updated for your friends.",
+        "UIBackgroundModes": ["location", "fetch"]
+      },
+      "config": {}
     },
     "android": {
       "adaptiveIcon": {
@@ -34,10 +34,13 @@
       "config": {
         "googleMaps": {
           "apiKey": "process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY"
-      }},
+        }
+      },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE"
       ],
       "package": "com.utkarsh07.travo"
     },

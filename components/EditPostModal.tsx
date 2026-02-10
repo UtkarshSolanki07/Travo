@@ -1,31 +1,42 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import { VideoView } from 'expo-video'
-import { Post } from '@/services/database'
-import { getOptimizedUrl } from '@/lib/cloudinary'
+import { getOptimizedUrl } from "@/lib/cloudinary";
+import { Post } from "@/services/database";
+import { Ionicons } from "@expo/vector-icons";
+import { VideoView } from "expo-video";
+import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface EditPostModalProps {
-  visible: boolean
-  post: Post | null
-  postText: string
-  postMedia: { uri: string, type: 'image' | 'video' } | null
-  venueName: string
-  locationName: string
-  venueResults: any[]
-  locationResults: any[]
-  isSearchingVenue: boolean
-  isSearchingLocation: boolean
-  updating: boolean
-  videoPlayer: any
-  onClose: () => void
-  onPostTextChange: (text: string) => void
-  onPickMedia: () => void
-  onRemoveMedia: () => void
-  onVenueSearch: (query: string) => void
-  onLocationSearch: (query: string) => void
-  onSelectVenue: (place: any) => void
-  onSelectLocation: (place: any) => void
-  onUpdatePost: () => void
+  visible: boolean;
+  post: Post | null;
+  postText: string;
+  postMedia: { uri: string; type: "image" | "video" } | null;
+  venueName: string;
+  locationName: string;
+  venueResults: any[];
+  locationResults: any[];
+  isSearchingVenue: boolean;
+  isSearchingLocation: boolean;
+  updating: boolean;
+  videoPlayer: any;
+  onClose: () => void;
+  onPostTextChange: (text: string) => void;
+  onPickMedia: () => void;
+  onRemoveMedia: () => void;
+  onVenueSearch: (query: string) => void;
+  onLocationSearch: (query: string) => void;
+  onSelectVenue: (place: any) => void;
+  onSelectLocation: (place: any) => void;
+  onUpdatePost: () => void;
 }
 
 export default function EditPostModal({
@@ -49,10 +60,10 @@ export default function EditPostModal({
   onLocationSearch,
   onSelectVenue,
   onSelectLocation,
-  onUpdatePost
+  onUpdatePost,
 }: EditPostModalProps) {
-  const existingMediaUrl = post?.media_url
-  const existingMediaType = post?.media_type
+  const existingMediaUrl = post?.media_url;
+  const existingMediaType = post?.media_type;
 
   return (
     <Modal
@@ -61,8 +72,8 @@ export default function EditPostModal({
       transparent={true}
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1 bg-black/50 justify-end"
       >
         <View className="bg-white rounded-t-3xl h-[80%] p-6">
@@ -74,24 +85,27 @@ export default function EditPostModal({
           </View>
 
           <ScrollView className="flex-1">
-            <TouchableOpacity 
+            <TouchableOpacity
               className="w-full aspect-[4/3] bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 justify-center items-center mb-5 overflow-hidden"
               onPress={onPickMedia}
             >
               {postMedia ? (
                 <View className="w-full h-full relative">
-                  {postMedia.type === 'video' ? (
+                  {postMedia.type === "video" ? (
                     <VideoView
-                      style={{ width: '100%', height: '100%' }}
+                      style={{ width: "100%", height: "100%" }}
                       player={videoPlayer}
                       allowsFullscreen
                       allowsPictureInPicture
                       nativeControls
                     />
                   ) : (
-                    <Image source={{ uri: postMedia.uri }} className="w-full h-full" />
+                    <Image
+                      source={{ uri: postMedia.uri }}
+                      className="w-full h-full"
+                    />
                   )}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     className="absolute top-2.5 right-2.5 bg-white rounded-xl"
                     onPress={onRemoveMedia}
                   >
@@ -100,26 +114,23 @@ export default function EditPostModal({
                 </View>
               ) : existingMediaUrl ? (
                 <View className="w-full h-full relative">
-                  {existingMediaType === 'video' ? (
+                  {existingMediaType === "video" ? (
                     <VideoView
-                      style={{ width: '100%', height: '100%' }}
+                      style={{ width: "100%", height: "100%" }}
                       player={videoPlayer}
                       allowsFullscreen
                       allowsPictureInPicture
                       nativeControls
                     />
                   ) : (
-                    <Image 
-                      source={{ uri: getOptimizedUrl(existingMediaUrl, { width: 800 }) }} 
-                      className="w-full h-full" 
+                    <Image
+                      source={{
+                        uri: getOptimizedUrl(existingMediaUrl, { width: 800 }),
+                      }}
+                      className="w-full h-full"
                     />
                   )}
-                  <TouchableOpacity 
-                    className="absolute top-2.5 right-2.5 bg-white rounded-xl"
-                    onPress={onRemoveMedia}
-                  >
-                    <Ionicons name="close-circle" size={24} color="#ef4444" />
-                  </TouchableOpacity>
+
                   <View className="absolute bottom-2.5 left-2.5 bg-black/60 px-3 py-1.5 rounded-lg">
                     <Text className="text-white text-xs">Tap to change</Text>
                   </View>
@@ -127,7 +138,9 @@ export default function EditPostModal({
               ) : (
                 <>
                   <Ionicons name="image-outline" size={48} color="#94a3b8" />
-                  <Text className="mt-3 text-slate-500 text-[15px]">Add Photo or Video</Text>
+                  <Text className="mt-3 text-slate-500 text-[15px]">
+                    Add Photo or Video
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -149,19 +162,24 @@ export default function EditPostModal({
                 value={venueName}
                 onChangeText={onVenueSearch}
               />
-              {isSearchingVenue && <ActivityIndicator size="small" color="#6366f1" />}
+              {isSearchingVenue && (
+                <ActivityIndicator size="small" color="#6366f1" />
+              )}
             </View>
 
             {venueResults.length > 0 && (
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
                 {venueResults.map((item, index) => (
-                  <TouchableOpacity 
-                    key={index} 
+                  <TouchableOpacity
+                    key={index}
                     className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
                     onPress={() => onSelectVenue(item)}
                   >
                     <Ionicons name="pin-outline" size={16} color="#64748b" />
-                    <Text className="text-[13px] text-slate-600 flex-1" numberOfLines={1}>
+                    <Text
+                      className="text-[13px] text-slate-600 flex-1"
+                      numberOfLines={1}
+                    >
                       {item.place_name}
                     </Text>
                   </TouchableOpacity>
@@ -177,19 +195,24 @@ export default function EditPostModal({
                 value={locationName}
                 onChangeText={onLocationSearch}
               />
-              {isSearchingLocation && <ActivityIndicator size="small" color="#6366f1" />}
+              {isSearchingLocation && (
+                <ActivityIndicator size="small" color="#6366f1" />
+              )}
             </View>
 
             {locationResults.length > 0 && (
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
                 {locationResults.map((item, index) => (
-                  <TouchableOpacity 
-                    key={index} 
+                  <TouchableOpacity
+                    key={index}
                     className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
                     onPress={() => onSelectLocation(item)}
                   >
                     <Ionicons name="map-outline" size={16} color="#64748b" />
-                    <Text className="text-[13px] text-slate-600 flex-1" numberOfLines={1}>
+                    <Text
+                      className="text-[13px] text-slate-600 flex-1"
+                      numberOfLines={1}
+                    >
                       {item.place_name}
                     </Text>
                   </TouchableOpacity>
@@ -199,7 +222,7 @@ export default function EditPostModal({
           </ScrollView>
 
           <View className="pt-5 border-t border-slate-100">
-            <TouchableOpacity 
+            <TouchableOpacity
               className="bg-indigo-500 p-3.5 rounded-xl items-center"
               onPress={onUpdatePost}
               disabled={updating}
@@ -214,5 +237,5 @@ export default function EditPostModal({
         </View>
       </KeyboardAvoidingView>
     </Modal>
-  )
+  );
 }
