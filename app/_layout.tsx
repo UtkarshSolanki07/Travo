@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import "react-native-url-polyfill/auto";
 import { LocationProvider } from "../context/LocationContext";
 import { database } from "../services/database";
-import "../services/locationTask"; // Register background task
+// import "../services/locationTask"; // Register background task
 
 const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 

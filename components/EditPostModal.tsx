@@ -34,6 +34,10 @@ interface EditPostModalProps {
   onRemoveMedia: () => void;
   onVenueSearch: (query: string) => void;
   onLocationSearch: (query: string) => void;
+  postCity?: string;
+  postCountry?: string;
+  visibility: "public" | "friends";
+  onVisibilityChange: (value: "public" | "friends") => void;
   onSelectVenue: (place: any) => void;
   onSelectLocation: (place: any) => void;
   onUpdatePost: () => void;
@@ -52,6 +56,10 @@ export default function EditPostModal({
   isSearchingLocation,
   updating,
   videoPlayer,
+  postCity,
+  postCountry,
+  visibility,
+  onVisibilityChange,
   onClose,
   onPostTextChange,
   onPickMedia,
@@ -154,6 +162,40 @@ export default function EditPostModal({
               onChangeText={onPostTextChange}
             />
 
+            <View className="flex-row items-center mb-4 px-1 gap-4">
+              <TouchableOpacity
+                onPress={() => onVisibilityChange("public")}
+                className={`flex-row items-center px-4 py-2 rounded-full border ${visibility === "public" ? "bg-indigo-50 border-indigo-200" : "bg-white border-slate-200"}`}
+              >
+                <Ionicons
+                  name="globe-outline"
+                  size={14}
+                  color={visibility === "public" ? "#6366f1" : "#64748b"}
+                />
+                <Text
+                  className={`text-[12px] font-medium ml-1.5 ${visibility === "public" ? "text-indigo-600" : "text-slate-500"}`}
+                >
+                  Public
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => onVisibilityChange("friends")}
+                className={`flex-row items-center px-4 py-2 rounded-full border ${visibility === "friends" ? "bg-indigo-50 border-indigo-200" : "bg-white border-slate-200"}`}
+              >
+                <Ionicons
+                  name="people-outline"
+                  size={14}
+                  color={visibility === "friends" ? "#6366f1" : "#64748b"}
+                />
+                <Text
+                  className={`text-[12px] font-medium ml-1.5 ${visibility === "friends" ? "text-indigo-600" : "text-slate-500"}`}
+                >
+                  Friends
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <View className="flex-row items-center bg-slate-50 rounded-xl px-3 border border-slate-200">
               <Ionicons name="location-outline" size={20} color="#6366f1" />
               <TextInput
@@ -166,6 +208,17 @@ export default function EditPostModal({
                 <ActivityIndicator size="small" color="#6366f1" />
               )}
             </View>
+
+            {(postCity || postCountry) && (
+              <View className="flex-row items-center mt-2 px-1">
+                <View className="bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100 flex-row items-center">
+                  <Ionicons name="map-outline" size={12} color="#6366f1" />
+                  <Text className="text-[11px] text-indigo-600 font-medium ml-1">
+                    {[postCity, postCountry].filter(Boolean).join(", ")}
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {venueResults.length > 0 && (
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">

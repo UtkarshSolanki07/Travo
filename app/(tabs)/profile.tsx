@@ -52,9 +52,14 @@ export default function ProfileScreen() {
   const [locationName, setLocationName] = useState("");
   const [venueResults, setVenueResults] = useState<any[]>([]);
   const [locationResults, setLocationResults] = useState<any[]>([]);
+  const [postCity, setPostCity] = useState("");
+  const [postCountry, setPostCountry] = useState("");
   const [isSearchingVenue, setIsSearchingVenue] = useState(false);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [postVisibility, setPostVisibility] = useState<"public" | "friends">(
+    "public",
+  );
 
   // Edit Post States
   const [isEditingPost, setIsEditingPost] = useState(false);
@@ -317,7 +322,9 @@ export default function ProfileScreen() {
         media_type: postMedia?.type || "note",
         venue_name: venueName,
         location_name: locationName,
-        visibility: "public",
+        city: postCity,
+        country: postCountry,
+        visibility: postVisibility,
       });
 
       Alert.alert("Success", "Post created successfully!");
@@ -328,6 +335,9 @@ export default function ProfileScreen() {
       setLocationName("");
       setVenueResults([]);
       setLocationResults([]);
+      setPostCity("");
+      setPostCountry("");
+      setPostVisibility("public");
       loadProfile();
     } catch (error) {
       console.error("Create post error:", error);
@@ -425,12 +435,19 @@ export default function ProfileScreen() {
     setVenueName(place.text || place.place_name.split(",")[0]);
     setVenueResults([]);
 
-    if (!locationName) {
-      const city =
-        place.context?.find((c: any) => c.id.startsWith("city"))?.text || "";
-      const country =
-        place.context?.find((c: any) => c.id.startsWith("country"))?.text || "";
+    const city =
+      place.properties?.city ||
+      place.context?.find((c: any) => c.id.startsWith("city"))?.text ||
+      "";
+    const country =
+      place.properties?.country ||
+      place.context?.find((c: any) => c.id.startsWith("country"))?.text ||
+      "";
 
+    if (city) setPostCity(city);
+    if (country) setPostCountry(country);
+
+    if (!locationName) {
       if (city || country) {
         setLocationName(`${city}${city && country ? ", " : ""}${country}`);
       } else {
@@ -445,6 +462,18 @@ export default function ProfileScreen() {
   const selectLocation = (place: any) => {
     setLocationName(place.place_name);
     setLocationResults([]);
+
+    const city =
+      place.properties?.city ||
+      place.context?.find((c: any) => c.id.startsWith("city"))?.text ||
+      "";
+    const country =
+      place.properties?.country ||
+      place.context?.find((c: any) => c.id.startsWith("country"))?.text ||
+      "";
+
+    if (city) setPostCity(city);
+    if (country) setPostCountry(country);
   };
 
   const openPostDetail = async (post: Post) => {
@@ -566,6 +595,9 @@ export default function ProfileScreen() {
     setPostText(selectedPost.text || "");
     setVenueName(selectedPost.venue_name || "");
     setLocationName(selectedPost.location_name || "");
+    setPostCity(selectedPost.city || "");
+    setPostCountry(selectedPost.country || "");
+    setPostVisibility(selectedPost.visibility || "public");
     setPostMedia(null); // Will show existing media from selectedPost
     setIsEditingPost(true);
   };
@@ -594,6 +626,9 @@ export default function ProfileScreen() {
         media_type: mediaType as any,
         venue_name: venueName,
         location_name: locationName,
+        city: postCity,
+        country: postCountry,
+        visibility: postVisibility,
       });
 
       Alert.alert("Success", "Post updated successfully!");
@@ -686,6 +721,10 @@ export default function ProfileScreen() {
           isSearchingLocation={isSearchingLocation}
           creating={creating}
           videoPlayer={createPlayer}
+          postCity={postCity}
+          postCountry={postCountry}
+          visibility={postVisibility}
+          onVisibilityChange={setPostVisibility}
           onClose={() => setIsCreatingPost(false)}
           onPostTextChange={setPostText}
           onPickMedia={pickPostMedia}
@@ -710,6 +749,10 @@ export default function ProfileScreen() {
           isSearchingLocation={isSearchingLocation}
           updating={updating}
           videoPlayer={editPlayer}
+          postCity={postCity}
+          postCountry={postCountry}
+          visibility={postVisibility}
+          onVisibilityChange={setPostVisibility}
           onClose={() => {
             setIsEditingPost(false);
             setEditingPostId(null);
@@ -717,6 +760,9 @@ export default function ProfileScreen() {
             setPostMedia(null);
             setVenueName("");
             setLocationName("");
+            setPostCity("");
+            setPostCountry("");
+            setPostVisibility("public");
           }}
           onPostTextChange={setPostText}
           onPickMedia={pickPostMedia}

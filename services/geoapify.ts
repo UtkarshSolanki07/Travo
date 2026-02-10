@@ -31,42 +31,32 @@ export interface GeoApifyFeature {
 }
 
 /**
- * Search for venues (specific places like cafes, restaurants, landmarks)
+ * Search for venues by NAME (what user types in search)
  * Used when user is adding a "Place" to their post
  */
 export const searchVenues = async (
   query: string,
   proximity?: { latitude: number; longitude: number },
+  bbox?: [number, number, number, number], // [lon1, lat1, lon2, lat2]
 ): Promise<GeoApifyFeature[]> => {
   if (!query || query.trim().length < 3 || !GEOAPIFY_API_KEY) return [];
 
   try {
-    // Use Places API for venue search with specific categories
-    const categories = [
-      'catering.restaurant',
-      'catering.cafe',
-      'catering.bar',
-      'tourism.attraction',
-      'tourism.sights',
-      'sport.stadium',
-      'entertainment',
-      'commercial.shopping_mall',
-      'leisure',
-      'accommodation.hotel',
-      'building',
-    ].join(',');
+    // Use autocomplete for TEXT search - RECOMMENDED for search bars
+    let url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&type=amenity&limit=10&apiKey=${GEOAPIFY_API_KEY}`;
 
-    let url = `https://api.geoapify.com/v2/places?categories=${categories}&text=${encodeURIComponent(query)}&apiKey=${GEOAPIFY_API_KEY}&limit=10`;
-
-    if (proximity) {
-      // Add filter for proximity search (within 50km radius)
-      url += `&filter=circle:${proximity.longitude},${proximity.latitude},50000`;
+    if (bbox) {
+      // Format: lon1,lat1,lon2,lat2
+      url += `&filter=rect:${bbox.join(",")}`;
+    } else if (proximity) {
+      // Use proximity bias and filter if no explicit bounding box
       url += `&bias=proximity:${proximity.longitude},${proximity.latitude}`;
+      url += `&filter=circle:${proximity.longitude},${proximity.latitude},50000`;
     }
 
     const res = await fetch(url);
     if (!res.ok) {
-      console.error(`Geoapify venues error: ${res.status}`);
+      console.error(`Geoapify autocomplete error: ${res.status}`);
       return [];
     }
 
@@ -74,24 +64,21 @@ export const searchVenues = async (
     const features = data.features || [];
 
     return features.map((f: any) => {
-      const props = f.properties;
-      
-      // Build context from address components
+      const props = f.properties || {};
+
+      // Build context
       const context = [];
-      if (props.city) {
+      if (props.city)
         context.push({ id: `city.${props.city}`, text: props.city });
-      }
-      if (props.state) {
+      if (props.state)
         context.push({ id: `state.${props.state}`, text: props.state });
-      }
-      if (props.country) {
+      if (props.country)
         context.push({ id: `country.${props.country}`, text: props.country });
-      }
 
       return {
         id: props.place_id || f.id || `${props.lat}-${props.lon}`,
-        text: props.name || props.formatted,
-        place_name: props.formatted || `${props.name || 'Unnamed'}, ${props.city || props.country || ''}`,
+        text: props.name || props.formatted?.split(",")[0] || "Unknown Venue",
+        place_name: props.formatted,
         center: [props.lon, props.lat],
         context: context.length > 0 ? context : undefined,
         properties: props,
@@ -99,7 +86,47 @@ export const searchVenues = async (
       };
     });
   } catch (error) {
-    console.error('Venue search failed:', error);
+    console.error("Venue search failed:", error);
+    return [];
+  }
+};
+
+/**
+ * Browse venues by CATEGORY in an area (no text search)
+ * Used for map exploration and "discovery" modes
+ */
+export const browseVenuesByCategory = async (
+  category: string, // e.g., "catering.cafe"
+  bbox: [number, number, number, number], // [lon1, lat1, lon2, lat2]
+): Promise<GeoApifyFeature[]> => {
+  if (!GEOAPIFY_API_KEY) return [];
+
+  try {
+    // Use /v2/places for category browsing - NO text parameter
+    const url = `https://api.geoapify.com/v2/places?categories=${category}&filter=rect:${bbox.join(",")}&limit=20&apiKey=${GEOAPIFY_API_KEY}`;
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error(`Geoapify places v2 error: ${res.status}`);
+      return [];
+    }
+
+    const data = await res.json();
+    const features = data.features || [];
+
+    return features.map((f: any) => {
+      const props = f.properties || {};
+      return {
+        id: props.place_id || f.id,
+        text: props.name || props.address_line1 || "Unnamed Venue",
+        place_name: props.formatted || props.address_line1,
+        center: [props.lon, props.lat],
+        properties: props,
+        place_id: props.place_id || f.id,
+      };
+    });
+  } catch (error) {
+    console.error("Browse venues failed:", error);
     return [];
   }
 };
@@ -115,15 +142,14 @@ export const searchLocations = async (
   if (!query || query.trim().length < 2 || !GEOAPIFY_API_KEY) return [];
 
   try {
-    // Use Geocoding API for general location search
-    let url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&apiKey=${GEOAPIFY_API_KEY}&limit=10&format=json`;
+    let url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&apiKey=${GEOAPIFY_API_KEY}&limit=10`;
 
     if (proximity) {
       url += `&bias=proximity:${proximity.longitude},${proximity.latitude}`;
     }
 
-    // Prefer cities, states, and countries over specific addresses
-    url += `&type=city,state,country,locality`;
+    // Prefer cities, counties, and countries
+    url += `&type=city,county,country,locality`;
 
     const res = await fetch(url);
     if (!res.ok) {
@@ -132,33 +158,39 @@ export const searchLocations = async (
     }
 
     const data = await res.json();
-    const results: GeoApifyResult[] = data.results || [];
+    const features = data.features || [];
 
-    return results.map((f) => {
-      // Build context from address components
+    return features.map((f: any) => {
+      const props = f.properties || {};
+
       const context = [];
-      if (f.city) {
-        context.push({ id: `city.${f.city}`, text: f.city });
-      }
-      if (f.state) {
-        context.push({ id: `state.${f.state}`, text: f.state });
-      }
-      if (f.country) {
-        context.push({ id: `country.${f.country}`, text: f.country });
-      }
+      if (props.city)
+        context.push({ id: `city.${props.city}`, text: props.city });
+      if (props.state)
+        context.push({ id: `state.${props.state}`, text: props.state });
+      if (props.country)
+        context.push({ id: `country.${props.country}`, text: props.country });
+
+      const bestName =
+        props.name ||
+        props.city ||
+        props.state ||
+        props.country ||
+        props.formatted ||
+        "Unknown Location";
 
       return {
-        id: f.place_id || f.id || `${f.lat}-${f.lon}`,
-        text: f.name || f.city || f.formatted,
-        place_name: f.formatted,
-        center: [f.lon, f.lat],
+        id: props.place_id || f.id || `${props.lat}-${props.lon}`,
+        text: bestName,
+        place_name: props.formatted || bestName,
+        center: [props.lon, props.lat],
         context: context.length > 0 ? context : undefined,
-        properties: f,
-        place_id: f.place_id || f.id,
+        properties: props,
+        place_id: props.place_id || f.id,
       };
     });
   } catch (error) {
-    console.error('Location search failed:', error);
+    console.error("Location search failed:", error);
     return [];
   }
 };
@@ -170,35 +202,41 @@ export const searchAll = async (
   query: string,
   proximity?: { latitude: number; longitude: number },
   bbox?: [number, number, number, number],
-  radiusKm = 15,
 ): Promise<GeoApifyFeature[]> => {
   if (!query || query.trim().length < 2 || !GEOAPIFY_API_KEY) return [];
 
   try {
-    let url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&apiKey=${GEOAPIFY_API_KEY}&limit=10&format=json`;
+    let url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&apiKey=${GEOAPIFY_API_KEY}&limit=10`;
 
     if (proximity) {
       url += `&bias=proximity:${proximity.longitude},${proximity.latitude}`;
     }
 
     if (bbox) {
-      url += `&bbox=${bbox.join(",")}`;
+      url += `&filter=rect:${bbox.join(",")}`;
     }
 
     const res = await fetch(url);
-    if (!res.ok) return [];
-    
-    const data = await res.json();
-    const results: GeoApifyResult[] = data.results || [];
+    if (!res.ok) {
+      console.error(`Geoapify searchAll error: ${res.status}`);
+      return [];
+    }
 
-    return results.map((f) => ({
-      id: f.place_id || f.id || `${f.lat}-${f.lon}`,
-      text: f.name || f.formatted,
-      place_name: f.formatted,
-      center: [f.lon, f.lat],
-      properties: f,
-      place_id: f.place_id || f.id,
-    }));
+    const data = await res.json();
+    const features = data.features || [];
+
+    return features.map((f: any) => {
+      const props = f.properties || {};
+
+      return {
+        id: props.place_id || f.id || `${props.lat}-${props.lon}`,
+        text: props.name || props.formatted,
+        place_name: props.formatted,
+        center: [props.lon, props.lat],
+        properties: props,
+        place_id: props.place_id || f.id,
+      };
+    });
   } catch (error) {
     console.error("GeoApify search failed:", error);
     return [];
@@ -215,23 +253,28 @@ export const reverseGeocode = async (
   if (!GEOAPIFY_API_KEY) return null;
 
   try {
-    const url = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lon}&apiKey=${GEOAPIFY_API_KEY}&format=json`;
+    const url = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lon}&apiKey=${GEOAPIFY_API_KEY}`;
     const res = await fetch(url);
-    
-    if (!res.ok) return null;
-    
+
+    if (!res.ok) {
+      console.error(`Geoapify reverse geocode error: ${res.status}`);
+      return null;
+    }
+
     const data = await res.json();
-    const f = data.results?.[0] as GeoApifyResult;
-    
+    const f = data.features?.[0];
+
     if (!f) return null;
 
+    const props = f.properties || {};
+
     return {
-      id: f.place_id || f.id || `${f.lat}-${f.lon}`,
-      text: f.name || f.formatted,
-      place_name: f.formatted,
-      center: [f.lon, f.lat],
-      properties: f,
-      place_id: f.place_id || f.id,
+      id: props.place_id || f.id || `${props.lat}-${props.lon}`,
+      text: props.name || props.formatted,
+      place_name: props.formatted,
+      center: [props.lon, props.lat],
+      properties: props,
+      place_id: props.place_id || f.id,
     };
   } catch (error) {
     console.error("GeoApify Reverse geocode failed:", error);

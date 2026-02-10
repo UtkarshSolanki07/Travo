@@ -23,7 +23,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }: any) => {
         const interests = interestsStr ? JSON.parse(interestsStr) : [];
 
         if (userId) {
-          console.log("[Background Location Task]", location.coords);
+          // console.log("[Background Location Task]", location.coords);
           await database.updateLiveLocation(
             userId,
             location.coords.latitude,
@@ -31,7 +31,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }: any) => {
             interests,
           );
         } else {
-          console.log("[Background Location Task] No user ID found");
+          // console.log("[Background Location Task] No user ID found");
         }
       } catch (err) {
         console.error("[Background Location Task] Error:", err);

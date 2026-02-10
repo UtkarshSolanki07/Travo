@@ -404,6 +404,9 @@ export const database = {
       media_type?: "image" | "video" | "note";
       venue_name?: string;
       location_name?: string;
+      city?: string;
+      country?: string;
+      visibility?: "public" | "friends";
     },
   ): Promise<void> {
     const updateData: any = {};
@@ -416,6 +419,10 @@ export const database = {
       updateData.venue_name = updates.venue_name;
     if (updates.location_name !== undefined)
       updateData.location_name = updates.location_name;
+    if (updates.city !== undefined) updateData.city = updates.city;
+    if (updates.country !== undefined) updateData.country = updates.country;
+    if (updates.visibility !== undefined)
+      updateData.visibility = updates.visibility;
     updateData.updated_at = new Date().toISOString();
     const { error } = await supabase
       .from("posts")

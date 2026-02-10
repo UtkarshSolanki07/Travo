@@ -79,29 +79,20 @@ export default function Index() {
     [updateLocation],
   );
 
-  // Check if tracking is already running on mount
   useEffect(() => {
     (async () => {
       try {
         const isRegistered =
           await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
-        setIsLocationEnabled(isRegistered);
-
-        // If it was already on, we might want to start foreground watch as well
-        if (isRegistered && clerkUser) {
-          startForegroundWatch(clerkUser.id);
+        if (isRegistered) {
+          // console.log("Stopping lingering background location task...");
+          await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
         }
       } catch (e) {
-        console.error("Failed to check background location status", e);
+        console.error("Failed to stop lingering background location task", e);
       }
     })();
-
-    return () => {
-      if (trackingSubscription.current) {
-        trackingSubscription.current.remove();
-      }
-    };
-  }, [clerkUser, startForegroundWatch]);
+  }, []);
 
   const handleToggleLocation = async (value: boolean) => {
     const previous = isLocationEnabled;
@@ -129,47 +120,22 @@ export default function Index() {
         // Start Foreground Watch immediately (works in Expo Go)
         await startForegroundWatch(clerkUser.id);
 
-        // Attempt Background Tracking (may fail in Expo Go Android)
+        // Background Tracking disabled for now
+        /*
         try {
           const { status: bgStatus } =
             await Location.requestBackgroundPermissionsAsync();
           if (bgStatus === "granted") {
-            // Store user context for background task
-            await SecureStore.setItemAsync("current_user_id", clerkUser.id);
-            if (interestsRef.current) {
-              await SecureStore.setItemAsync(
-                "user_interests",
-                JSON.stringify(interestsRef.current),
-              );
-            }
-
-            await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-              accuracy: Location.Accuracy.Balanced,
-              distanceInterval: 50,
-              deferredUpdatesInterval: 10000,
-              deferredUpdatesDistance: 50,
-              showsBackgroundLocationIndicator: true,
-              foregroundService: {
-                notificationTitle: "Travo Live Tracking",
-                notificationBody: "Sharing your location with friends...",
-                notificationColor: "#6366f1",
-              },
-            });
-          } else {
-            console.warn(
-              "Background permission not granted - tracking will only work in foreground",
-            );
+            // ...
           }
         } catch (bgError) {
-          console.warn(
-            "Background tracking failed to start (Expo Go limitation?):",
-            bgError,
-          );
+          console.warn("Background tracking failed", bgError);
         }
+        */
 
         await database.updateProfile(clerkUser.id, {
           is_live_tracking: true,
-          interests: interestsRef.current,
+          interests: interestsRef.current || [],
         });
       } else {
         // Stop Tracking
@@ -178,6 +144,7 @@ export default function Index() {
           trackingSubscription.current = null;
         }
 
+        // Stop background task if it was running (to clear notification)
         const isRegistered =
           await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
         if (isRegistered) {
@@ -186,6 +153,7 @@ export default function Index() {
 
         await database.updateProfile(clerkUser.id, {
           is_live_tracking: false,
+          interests: interestsRef.current || [],
         });
 
         await SecureStore.deleteItemAsync("current_user_id");
