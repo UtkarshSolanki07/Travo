@@ -43,6 +43,33 @@ interface EditPostModalProps {
   onUpdatePost: () => void;
 }
 
+/**
+ * Renders a modal sheet for editing a post, including media preview/selection, post text, venue and location search with selectable results, and an update action.
+ *
+ * @param visible - Controls modal visibility
+ * @param post - Existing post object; used to display existing media when present
+ * @param postText - Current post text value
+ * @param postMedia - Newly selected media preview (image or video) for the post
+ * @param venueName - Current venue search text
+ * @param locationName - Current location search text
+ * @param venueResults - Array of venue search results displayed for selection
+ * @param locationResults - Array of location search results displayed for selection
+ * @param isSearchingVenue - Whether venue search is in progress (shows activity indicator)
+ * @param isSearchingLocation - Whether location search is in progress (shows activity indicator)
+ * @param updating - Whether the post update operation is in progress (disables update button and shows loader)
+ * @param videoPlayer - Reference passed to the video player used for video previews
+ * @param onClose - Called to close the modal
+ * @param onPostTextChange - Called with new text when the post content changes
+ * @param onPickMedia - Called to initiate media selection
+ * @param onRemoveMedia - Called to remove currently selected or existing media
+ * @param onVenueSearch - Called with new venue query text
+ * @param onLocationSearch - Called with new location query text
+ * @param onSelectVenue - Called with a venue result when the user selects one
+ * @param onSelectLocation - Called with a location result when the user selects one
+ * @param onUpdatePost - Called to submit the updated post
+ *
+ * @returns The rendered Edit Post modal React element
+ */
 export default function EditPostModal({
   visible,
   post,

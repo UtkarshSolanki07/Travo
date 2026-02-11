@@ -1,6 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
+/**
+ * Renders the app's bottom tab navigator containing Map and Profile tabs.
+ *
+ * @returns A React element: a Tabs navigator with headers hidden and two screens — "Map" (map-outline icon) and "Profile" (person-outline icon).
+ */
 export default function TabLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false }}>

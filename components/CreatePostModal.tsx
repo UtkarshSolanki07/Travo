@@ -47,6 +47,31 @@ interface CreatePostModalProps {
   onCreatePost: () => void;
 }
 
+/**
+ * Modal component that provides UI for composing and submitting a new post with optional image or video, place and location selection.
+ *
+ * @param visible - Whether the modal is visible
+ * @param postText - Current post text content
+ * @param postMedia - Selected media for the post, or `null` when none; object contains `uri` and `type` ('image' | 'video')
+ * @param venueName - Current venue input text
+ * @param locationName - Current location input text
+ * @param venueResults - Array of venue search results to display
+ * @param locationResults - Array of location search results to display
+ * @param isSearchingVenue - Whether venue search is in progress (shows a spinner)
+ * @param isSearchingLocation - Whether location search is in progress (shows a spinner)
+ * @param creating - Whether the post creation is in progress (disables submit and shows a spinner)
+ * @param videoPlayer - Optional ref or player instance used to render video previews
+ * @param onClose - Handler invoked to close the modal
+ * @param onPostTextChange - Handler invoked when post text changes
+ * @param onPickMedia - Handler invoked to pick or replace media
+ * @param onRemoveMedia - Handler invoked to remove the selected media
+ * @param onVenueSearch - Handler invoked with new venue input to perform venue search
+ * @param onLocationSearch - Handler invoked with new location input to perform location search
+ * @param onSelectVenue - Handler invoked with a venue result when the user selects it
+ * @param onSelectLocation - Handler invoked with a location result when the user selects it
+ * @param onCreatePost - Handler invoked to submit the post
+ * @returns The CreatePostModal React element
+ */
 export default function CreatePostModal({
   visible,
   postText,

@@ -18,6 +18,13 @@ import { useWarmUpBrowser } from '../../hooks/useWarmUpBrowser'
 
 WebBrowser.maybeCompleteAuthSession()
 
+/**
+ * Render the sign-in screen and manage email/password and Google OAuth sign-in flows.
+ *
+ * Performs browser warm-up, accepts user credentials, attempts authentication, sets the active session on successful sign-in, and navigates to the app root. Displays error messages when sign-in fails and prevents duplicate OAuth attempts when the user is already signed in.
+ *
+ * @returns The sign-in page UI as a React element
+ */
 export default function Page() {
   useWarmUpBrowser()
   const { signIn, setActive, isLoaded } = useSignIn()
