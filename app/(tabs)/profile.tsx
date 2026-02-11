@@ -1,4 +1,4 @@
-import { useLocationContext } from "@/context/LocationContext";
+import { useMapContext } from "@/context/MapContext";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { database, Post, PostComment, User } from "@/services/database";
 import { searchLocations, searchVenues } from "@/services/geoapify";
@@ -22,7 +22,7 @@ import ProfileHeader from "@/components/ProfileHeader";
 
 export default function ProfileScreen() {
   const { user: clerkUser } = useUser();
-  const { userLocation, updateLocation } = useLocationContext();
+  const { userLocation, setUserLocation: updateLocation } = useMapContext();
 
   // Profile Data
   const [userData, setUserData] = useState<User | null>(null);
@@ -393,7 +393,10 @@ export default function ProfileScreen() {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
           };
-          updateLocation(pos.coords.latitude, pos.coords.longitude);
+          updateLocation({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
         }
       } catch (e) {
         console.error("Silent location fetch failed", e);
@@ -421,7 +424,10 @@ export default function ProfileScreen() {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
           };
-          updateLocation(pos.coords.latitude, pos.coords.longitude);
+          updateLocation({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
         }
       } catch (e) {
         console.error("Silent location fetch failed", e);

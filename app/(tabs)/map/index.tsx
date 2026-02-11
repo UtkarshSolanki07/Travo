@@ -1,45 +1,72 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  FlatList,
-  Keyboard,
-  Modal,
-  Pressable,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-
-import MapComponent, { Marker } from "@/components/MapComponent";
+import LocationInfoCard from "@/components/LocationInfoCard";
 import { SignOutButton } from "@/components/SignOutButton";
 import { useMapContext } from "@/context/MapContext";
 import { database } from "@/services/database";
-import { LOCATION_TASK_NAME } from "@/services/locationTask";
+import { reverseGeocode, searchAll } from "@/services/geoapify";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import debounce from "lodash.debounce";
-import { reverseGeocode, searchAll } from "../../services/geoapify";
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState
+} from "react";
+import {
+    FlatList,
+    Keyboard,
+    Modal,
+    Platform,
+    Pressable,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 
-export default function Index() {
-  const mapRef = useRef<any>(null);
+// Dummy data for activities (will be replaced in Segment 4)
+const DUMMY_ACTIVITIES = [
+  {
+    id: "1",
+    title: "Morning Yoga",
+    latitude: 37.78825,
+    longitude: -122.4324,
+    interest: "Fitness",
+  },
+  {
+    id: "2",
+    title: "Coffee Meetup",
+    latitude: 37.75825,
+    longitude: -122.4624,
+    interest: "Social",
+  },
+];
+
+const MapScreen = () => {
+  const {
+    userLocation,
+    selectedLocation,
+    setSelectedLocation,
+    setUserLocation: updateLocation,
+  } = useMapContext();
+  const mapRef = useRef<MapView>(null);
   const router = useRouter();
   const { user: clerkUser } = useUser();
-  const { userLocation, setUserLocation: updateLocation } = useMapContext();
 
+  // Local UI States
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
-  const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
-
-  const hasInitialLocation = useRef(false);
-  const trackingSubscription = useRef<any>(null); // For foreground fallback
-  const interestsRef = useRef<string[]>([]);
+  const trackingSubscription = useRef<any>(null);
   const toggleRequestId = useRef(0);
+  const interestsRef = useRef<string[]>([]);
+
   const fallbackRegion = {
     latitude: 37.7749,
     longitude: -122.4194,
@@ -50,7 +77,6 @@ export default function Index() {
   const startForegroundWatch = useCallback(
     async (userId: string) => {
       if (trackingSubscription.current) return;
-
       try {
         trackingSubscription.current = await Location.watchPositionAsync(
           {
@@ -82,116 +108,41 @@ export default function Index() {
     [updateLocation],
   );
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const isRegistered =
-          await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
-        if (isRegistered) {
-          // console.log("Stopping lingering background location task...");
-          await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-        }
-      } catch (e) {
-        console.error("Failed to stop lingering background location task", e);
-      }
-    })();
-  }, []);
-
   const handleToggleLocation = async (value: boolean) => {
     const previous = isLocationEnabled;
     const currentRequestId = ++toggleRequestId.current;
-
-    // Optimistic update
     setIsLocationEnabled(value);
 
     if (!clerkUser) {
-      if (value) {
-        setIsLocationEnabled(false);
-      }
+      if (value) setIsLocationEnabled(false);
       return;
     }
 
     try {
       if (value) {
-        // Start Tracking
-        const { status: fgStatus } =
-          await Location.requestForegroundPermissionsAsync();
-        if (fgStatus !== "granted") {
-          throw new Error("Foreground location permission denied");
-        }
-
-        // Start Foreground Watch immediately (works in Expo Go)
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") throw new Error("Permission denied");
         await startForegroundWatch(clerkUser.id);
-
-        // Background Tracking disabled for now
-        /*
-        try {
-          const { status: bgStatus } =
-            await Location.requestBackgroundPermissionsAsync();
-          if (bgStatus === "granted") {
-            // ...
-          }
-        } catch (bgError) {
-          console.warn("Background tracking failed", bgError);
-        }
-        */
-
         await database.updateProfile(clerkUser.id, {
           is_live_tracking: true,
           interests: interestsRef.current || [],
         });
       } else {
-        // Stop Tracking
         if (trackingSubscription.current) {
           trackingSubscription.current.remove();
           trackingSubscription.current = null;
         }
-
-        // Stop background task if it was running (to clear notification)
-        const isRegistered =
-          await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
-        if (isRegistered) {
-          await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-        }
-
         await database.updateProfile(clerkUser.id, {
           is_live_tracking: false,
           interests: interestsRef.current || [],
         });
-
         await SecureStore.deleteItemAsync("current_user_id");
       }
     } catch (error) {
-      console.error("Failed to toggle tracking", error);
-      setIsLocationEnabled(previous); // Revert UI
-      return;
-    }
-
-    if (currentRequestId !== toggleRequestId.current) {
-      return;
+      console.error("Toggle location failed", error);
+      setIsLocationEnabled(previous);
     }
   };
-
-  // Sync map with user location shared from profile
-  useEffect(() => {
-    if (userLocation && !hasInitialLocation.current) {
-      hasInitialLocation.current = true;
-      setSelectedPlace({
-        name: "My Location",
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-      });
-      mapRef.current?.animateToRegion(
-        {
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        },
-        1000,
-      );
-    }
-  }, [userLocation]);
 
   const debouncedSearch = useRef(
     debounce(async (text: string) => {
@@ -209,13 +160,12 @@ export default function Index() {
     if (text.trim().length === 0) {
       setResults([]);
       debouncedSearch.cancel();
-      setSelectedPlace(null);
+      setSelectedLocation(null);
 
-      const targetLocation = userLocation || fallbackRegion;
+      const target = userLocation || fallbackRegion;
       mapRef.current?.animateToRegion(
         {
-          latitude: targetLocation.latitude,
-          longitude: targetLocation.longitude,
+          ...target,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         },
@@ -226,28 +176,15 @@ export default function Index() {
     }
   };
 
-  const handleSelect = (place: any) => {
-    if (!place.center || place.center.length < 2) {
-      console.warn("Invalid place data:", place);
-      return;
-    }
+  const handleSelectPlace = (place: any) => {
     const [lon, lat] = place.center;
-    setSelectedPlace({
-      name: place.place_name,
+    const newLocation = {
       latitude: lat,
       longitude: lon,
-    });
-
-    mapRef.current?.animateToRegion(
-      {
-        latitude: lat,
-        longitude: lon,
-        latitudeDelta: 0.3,
-        longitudeDelta: 0.3,
-      },
-      800,
-    );
-
+      name: place.place_name,
+      formattedAddress: place.place_name,
+    };
+    setSelectedLocation(newLocation);
     setResults([]);
     setQuery(place.place_name);
     Keyboard.dismiss();
@@ -255,66 +192,75 @@ export default function Index() {
 
   const handleLongPress = async (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
-
-    setSelectedPlace({
-      name: "Loading address...",
-      latitude,
-      longitude,
-    });
-
     const data = await reverseGeocode(latitude, longitude);
     const name =
       data?.place_name ||
       `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
 
-    setSelectedPlace({
-      name,
+    setSelectedLocation({
       latitude,
       longitude,
+      name,
+      formattedAddress: data?.place_name,
     });
-
     setQuery(name);
     setResults([]);
   };
 
+  // Centering effect
+  useEffect(() => {
+    const target = selectedLocation || userLocation;
+    if (target) {
+      mapRef.current?.animateToRegion(
+        {
+          latitude: target.latitude,
+          longitude: target.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        },
+        1000,
+      );
+    }
+  }, [selectedLocation, userLocation]);
+
   return (
     <View className="flex-1">
-      <MapComponent
+      <MapView
         ref={mapRef}
-        className="flex-1"
+        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined} // Google Maps on Android, Apple Maps on iOS
+        style={{ flex: 1 }}
         onLongPress={handleLongPress}
-        initialRegion={
-          userLocation
-            ? {
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-              }
-            : fallbackRegion
-        }
+        initialRegion={fallbackRegion}
       >
         {userLocation && (
           <Marker
-            coordinate={{
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
-            }}
+            coordinate={userLocation}
             title="My Location"
             pinColor="blue"
           />
         )}
-        {selectedPlace && (
+        {selectedLocation && (
           <Marker
-            coordinate={{
-              latitude: selectedPlace.latitude,
-              longitude: selectedPlace.longitude,
-            }}
-            title={selectedPlace.name}
+            coordinate={selectedLocation}
+            title={selectedLocation.name || "Selected"}
+            pinColor="red"
           />
         )}
-      </MapComponent>
+        {DUMMY_ACTIVITIES.map((activity) => (
+          <Marker
+            key={activity.id}
+            coordinate={{
+              latitude: activity.latitude,
+              longitude: activity.longitude,
+            }}
+            title={activity.title}
+            description={activity.interest}
+            pinColor="green"
+          />
+        ))}
+      </MapView>
 
+      {/* Floating Menu Toggle */}
       <View className="absolute right-4 top-12 z-30">
         <TouchableOpacity
           className="h-11 w-11 items-center justify-center rounded-full bg-white shadow-lg"
@@ -333,25 +279,47 @@ export default function Index() {
           onChangeText={handleSearch}
           className="h-11 rounded-xl bg-slate-100 px-4 text-base text-slate-900"
         />
-
-        <FlatList
-          data={results}
-          keyExtractor={(item) => item.id}
-          keyboardShouldPersistTaps="handled"
-          className="mt-2 max-h-56"
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              className="border-b border-slate-100 py-3"
-              onPress={() => handleSelect(item)}
-            >
-              <Text className="text-sm text-slate-700" numberOfLines={2}>
-                {item.place_name}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
+        {results.length > 0 && (
+          <FlatList
+            data={results}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            className="mt-2 max-h-56"
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                className="border-b border-slate-100 py-3"
+                onPress={() => handleSelectPlace(item)}
+              >
+                <Text className="text-sm text-slate-700" numberOfLines={2}>
+                  {item.place_name}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        )}
       </View>
 
+      {/* Info Card */}
+      {selectedLocation && (
+        <LocationInfoCard
+          name={selectedLocation.name}
+          address={selectedLocation.formattedAddress}
+          onCreateActivity={() => {
+            // Navigate to activities/create passing the selected location
+            router.push({
+              pathname: "/activities",
+              params: {
+                lat: selectedLocation.latitude,
+                lon: selectedLocation.longitude,
+                name: selectedLocation.name,
+                address: selectedLocation.formattedAddress,
+              },
+            });
+          }}
+        />
+      )}
+
+      {/* Menu Modal */}
       <Modal transparent visible={isMenuOpen} animationType="fade">
         <Pressable
           className="flex-1 bg-slate-900/20"
@@ -366,7 +334,6 @@ export default function Index() {
               <Ionicons name="close" size={20} color="#64748b" />
             </TouchableOpacity>
           </View>
-
           <View className="mb-3 rounded-xl bg-slate-50 px-3 py-3">
             <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Quick Settings
@@ -387,7 +354,6 @@ export default function Index() {
               />
             </View>
           </View>
-
           <TouchableOpacity
             className="flex-row items-center justify-between py-3"
             onPress={() => {
@@ -403,7 +369,6 @@ export default function Index() {
             </View>
             <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
           </TouchableOpacity>
-
           {clerkUser ? (
             <View className="mt-2 rounded-xl bg-slate-50">
               <SignOutButton />
@@ -417,25 +382,14 @@ export default function Index() {
               }}
             >
               <Text className="text-sm font-semibold text-indigo-600">
-                Sign in to access more settings
+                Sign in for more
               </Text>
             </TouchableOpacity>
           )}
-
-          <View className="mt-3 flex-row items-start">
-            <View className="mr-2 mt-0.5">
-              <Ionicons
-                name="information-circle-outline"
-                size={16}
-                color="#94a3b8"
-              />
-            </View>
-            <Text className="text-xs text-slate-400">
-              Your approximate location is shared, not your exact address.
-            </Text>
-          </View>
         </View>
       </Modal>
     </View>
   );
-}
+};
+
+export default MapScreen;

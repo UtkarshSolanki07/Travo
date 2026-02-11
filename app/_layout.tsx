@@ -3,7 +3,7 @@ import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import "react-native-url-polyfill/auto";
-import { LocationProvider } from "../context/LocationContext";
+import { MapProvider } from "../context/MapContext";
 import { database } from "../services/database";
 // import "../services/locationTask"; // Register background task
 
@@ -51,9 +51,9 @@ export default function RootLayout() {
       publishableKey={CLERK_PUBLISHABLE_KEY!}
       tokenCache={tokenCache}
     >
-      <LocationProvider>
+      <MapProvider>
         <InitialLayout />
-      </LocationProvider>
+      </MapProvider>
     </ClerkProvider>
   );
 }

@@ -37,7 +37,7 @@ export interface GeoApifyFeature {
 export const searchVenues = async (
   query: string,
   proximity?: { latitude: number; longitude: number },
-  bbox?: [number, number, number, number], // [lon1, lat1, lon2, lat2]
+  bbox?: [number, number, number, number],
 ): Promise<GeoApifyFeature[]> => {
   if (!query || query.trim().length < 3 || !GEOAPIFY_API_KEY) return [];
 
