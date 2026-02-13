@@ -1,51 +1,31 @@
+import ActivityDetailsModal from "@/components/ActivityDetailsModal";
+import CreateActivityModal from "@/components/CreateActivityModal";
 import LocationInfoCard from "@/components/LocationInfoCard";
 import { SignOutButton } from "@/components/SignOutButton";
 import { useMapContext } from "@/context/MapContext";
-import { database } from "@/services/database";
+import { database, type Activity } from "@/services/database";
 import { reverseGeocode, searchAll } from "@/services/geoapify";
+import { getRoute, LatLng } from "@/services/routes";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import debounce from "lodash.debounce";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    useCallback,
-    useEffect,
-    useRef,
-    useState
-} from "react";
-import {
-    FlatList,
-    Keyboard,
-    Modal,
-    Platform,
-    Pressable,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Keyboard,
+  Modal,
+  Platform,
+  Pressable,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-
-// Dummy data for activities (will be replaced in Segment 4)
-const DUMMY_ACTIVITIES = [
-  {
-    id: "1",
-    title: "Morning Yoga",
-    latitude: 37.78825,
-    longitude: -122.4324,
-    interest: "Fitness",
-  },
-  {
-    id: "2",
-    title: "Coffee Meetup",
-    latitude: 37.75825,
-    longitude: -122.4624,
-    interest: "Social",
-  },
-];
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 
 const MapScreen = () => {
   const {
@@ -63,6 +43,25 @@ const MapScreen = () => {
   const [results, setResults] = useState<any[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
+  const [route, setRoute] = useState<{
+    points: LatLng[];
+    distanceKm: number;
+    durationMin: number;
+  } | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
+    null,
+  );
+
+  useEffect(() => {
+    console.log("Selected Location changed:", selectedLocation);
+  }, [selectedLocation]);
+
+  useEffect(() => {
+    console.log("Route changed:", !!route);
+  }, [route]);
+
   const trackingSubscription = useRef<any>(null);
   const toggleRequestId = useRef(0);
   const interestsRef = useRef<string[]>([]);
@@ -190,6 +189,17 @@ const MapScreen = () => {
     Keyboard.dismiss();
   };
 
+  const handlePoiClick = (event: any) => {
+    const { coordinate, name } = event.nativeEvent;
+    setSelectedLocation({
+      latitude: coordinate.latitude,
+      longitude: coordinate.longitude,
+      name: name,
+      formattedAddress: name,
+    });
+    setQuery(name);
+  };
+
   const handleLongPress = async (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
     const data = await reverseGeocode(latitude, longitude);
@@ -223,14 +233,75 @@ const MapScreen = () => {
     }
   }, [selectedLocation, userLocation]);
 
+  // Fetch activities when user location changes
+  useEffect(() => {
+    if (!userLocation) return;
+
+    const fetchActivities = async () => {
+      try {
+        const fetchedActivities = await database.getActivities({
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          radiusKm: 50, // 50km radius
+          status: "upcoming",
+        });
+        setActivities(fetchedActivities);
+      } catch (error) {
+        console.error("Failed to fetch activities:", error);
+      }
+    };
+
+    fetchActivities();
+  }, [userLocation]);
+
+  const handleActivityCreated = () => {
+    // Refresh activities after creation
+    if (userLocation) {
+      database
+        .getActivities({
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          radiusKm: 50,
+          status: "upcoming",
+        })
+        .then(setActivities)
+        .catch(console.error);
+    }
+  };
+
+  // Route fetching logic
+  useEffect(() => {
+    if (!userLocation || !selectedLocation) {
+      setRoute(null);
+      return;
+    }
+
+    const run = async () => {
+      const result = await getRoute(
+        { latitude: userLocation.latitude, longitude: userLocation.longitude },
+        {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+        },
+      );
+      setRoute(result);
+    };
+
+    run();
+  }, [userLocation, selectedLocation]);
+
   return (
     <View className="flex-1">
       <MapView
         ref={mapRef}
-        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined} // Google Maps on Android, Apple Maps on iOS
+        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
         style={{ flex: 1 }}
         onLongPress={handleLongPress}
+        onPoiClick={handlePoiClick}
         initialRegion={fallbackRegion}
+        showsTraffic={true}
+        showsUserLocation={true}
+        showsMyLocationButton={true}
       >
         {userLocation && (
           <Marker
@@ -246,7 +317,35 @@ const MapScreen = () => {
             pinColor="red"
           />
         )}
-        {DUMMY_ACTIVITIES.map((activity) => (
+        {route && (
+          <>
+            {/* Border/shadow layer for depth and visibility */}
+            <Polyline
+              coordinates={route.points}
+              strokeWidth={10}
+              strokeColor="rgba(79, 70, 229, 0.2)"
+              lineCap="round"
+              lineJoin="round"
+            />
+            {/* White outline for contrast */}
+            <Polyline
+              coordinates={route.points}
+              strokeWidth={7}
+              strokeColor="#ffffff"
+              lineCap="round"
+              lineJoin="round"
+            />
+            {/* Main route line - bold and vibrant */}
+            <Polyline
+              coordinates={route.points}
+              strokeWidth={5}
+              strokeColor="#4f46e5"
+              lineCap="round"
+              lineJoin="round"
+            />
+          </>
+        )}
+        {activities.map((activity) => (
           <Marker
             key={activity.id}
             coordinate={{
@@ -254,11 +353,27 @@ const MapScreen = () => {
               longitude: activity.longitude,
             }}
             title={activity.title}
-            description={activity.interest}
+            description={activity.activity_type || activity.interests?.[0]}
             pinColor="green"
+            onPress={() => {
+              setSelectedActivity(activity);
+              setSelectedLocation({
+                latitude: activity.latitude,
+                longitude: activity.longitude,
+                name: activity.title,
+                formattedAddress: activity.city || activity.activity_type || "",
+              });
+              setQuery(activity.title);
+            }}
           />
         ))}
       </MapView>
+
+      <ActivityDetailsModal
+        activity={selectedActivity}
+        visible={!!selectedActivity}
+        onClose={() => setSelectedActivity(null)}
+      />
 
       {/* Floating Menu Toggle */}
       <View className="absolute right-4 top-12 z-30">
@@ -282,7 +397,7 @@ const MapScreen = () => {
         {results.length > 0 && (
           <FlatList
             data={results}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) => `${item.id}-${index}`}
             keyboardShouldPersistTaps="handled"
             className="mt-2 max-h-56"
             renderItem={({ item }) => (
@@ -302,20 +417,13 @@ const MapScreen = () => {
       {/* Info Card */}
       {selectedLocation && (
         <LocationInfoCard
-          name={selectedLocation.name}
+          name={selectedLocation.name || "Selected Location"}
           address={selectedLocation.formattedAddress}
-          onCreateActivity={() => {
-            // Navigate to activities/create passing the selected location
-            router.push({
-              pathname: "/activities",
-              params: {
-                lat: selectedLocation.latitude,
-                lon: selectedLocation.longitude,
-                name: selectedLocation.name,
-                address: selectedLocation.formattedAddress,
-              },
-            });
-          }}
+          eta={route ? `${Math.round(route.durationMin)} min` : undefined}
+          distance={route ? `${route.distanceKm.toFixed(1)} km` : undefined}
+          distanceKm={route?.distanceKm}
+          driveDurationMin={route?.durationMin}
+          onCreateActivity={() => setIsCreateModalVisible(true)}
         />
       )}
 
@@ -388,6 +496,28 @@ const MapScreen = () => {
           )}
         </View>
       </Modal>
+
+      {/* Create Activity Modal */}
+      <CreateActivityModal
+        visible={isCreateModalVisible}
+        onClose={() => setIsCreateModalVisible(false)}
+        initialLocation={
+          selectedLocation
+            ? {
+                latitude: selectedLocation.latitude,
+                longitude: selectedLocation.longitude,
+                city: selectedLocation.formattedAddress,
+              }
+            : userLocation
+              ? {
+                  latitude: userLocation.latitude,
+                  longitude: userLocation.longitude,
+                  city: undefined,
+                }
+              : undefined
+        }
+        onActivityCreated={handleActivityCreated}
+      />
     </View>
   );
 };
