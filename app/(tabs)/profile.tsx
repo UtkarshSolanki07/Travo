@@ -1,4 +1,4 @@
-import { useLocationContext } from "@/context/LocationContext";
+import { useMapContext } from "@/context/MapContext";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { database, Post, PostComment, User } from "@/services/database";
 import { searchLocations, searchVenues } from "@/services/geoapify";
@@ -22,7 +22,7 @@ import ProfileHeader from "@/components/ProfileHeader";
 
 export default function ProfileScreen() {
   const { user: clerkUser } = useUser();
-  const { userLocation, updateLocation } = useLocationContext();
+  const { userLocation, setUserLocation: updateLocation } = useMapContext();
 
   // Profile Data
   const [userData, setUserData] = useState<User | null>(null);
@@ -52,14 +52,20 @@ export default function ProfileScreen() {
   const [locationName, setLocationName] = useState("");
   const [venueResults, setVenueResults] = useState<any[]>([]);
   const [locationResults, setLocationResults] = useState<any[]>([]);
+  const [postCity, setPostCity] = useState("");
+  const [postCountry, setPostCountry] = useState("");
   const [isSearchingVenue, setIsSearchingVenue] = useState(false);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [postVisibility, setPostVisibility] = useState<"public" | "friends">(
+    "public",
+  );
 
   // Edit Post States
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [mediaRemoved, setMediaRemoved] = useState(false);
 
   // Post Detail States
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -283,7 +289,7 @@ export default function ProfileScreen() {
 
   const pickPostMedia = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       quality: 0.8,
     });
@@ -317,7 +323,9 @@ export default function ProfileScreen() {
         media_type: postMedia?.type || "note",
         venue_name: venueName,
         location_name: locationName,
-        visibility: "public",
+        city: postCity,
+        country: postCountry,
+        visibility: postVisibility,
       });
 
       Alert.alert("Success", "Post created successfully!");
@@ -328,6 +336,9 @@ export default function ProfileScreen() {
       setLocationName("");
       setVenueResults([]);
       setLocationResults([]);
+      setPostCity("");
+      setPostCountry("");
+      setPostVisibility("public");
       loadProfile();
     } catch (error) {
       console.error("Create post error:", error);
@@ -383,7 +394,10 @@ export default function ProfileScreen() {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
           };
-          updateLocation(pos.coords.latitude, pos.coords.longitude);
+          updateLocation({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
         }
       } catch (e) {
         console.error("Silent location fetch failed", e);
@@ -411,7 +425,10 @@ export default function ProfileScreen() {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
           };
-          updateLocation(pos.coords.latitude, pos.coords.longitude);
+          updateLocation({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
         }
       } catch (e) {
         console.error("Silent location fetch failed", e);
@@ -425,12 +442,19 @@ export default function ProfileScreen() {
     setVenueName(place.text || place.place_name.split(",")[0]);
     setVenueResults([]);
 
-    if (!locationName) {
-      const city =
-        place.context?.find((c: any) => c.id.startsWith("city"))?.text || "";
-      const country =
-        place.context?.find((c: any) => c.id.startsWith("country"))?.text || "";
+    const city =
+      place.properties?.city ||
+      place.context?.find((c: any) => c.id.startsWith("city"))?.text ||
+      "";
+    const country =
+      place.properties?.country ||
+      place.context?.find((c: any) => c.id.startsWith("country"))?.text ||
+      "";
 
+    if (city) setPostCity(city);
+    if (country) setPostCountry(country);
+
+    if (!locationName) {
       if (city || country) {
         setLocationName(`${city}${city && country ? ", " : ""}${country}`);
       } else {
@@ -445,6 +469,18 @@ export default function ProfileScreen() {
   const selectLocation = (place: any) => {
     setLocationName(place.place_name);
     setLocationResults([]);
+
+    const city =
+      place.properties?.city ||
+      place.context?.find((c: any) => c.id.startsWith("city"))?.text ||
+      "";
+    const country =
+      place.properties?.country ||
+      place.context?.find((c: any) => c.id.startsWith("country"))?.text ||
+      "";
+
+    if (city) setPostCity(city);
+    if (country) setPostCountry(country);
   };
 
   const openPostDetail = async (post: Post) => {
@@ -513,14 +549,14 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!clerkUser) return;
+    if (!clerkUser || !selectedPost) return;
     try {
       await database.deleteComment(commentId, clerkUser.id);
-      const updatedComments = await database.getComments(selectedPost!.id);
+      const updatedComments = await database.getComments(selectedPost.id);
       setComments(updatedComments);
       Alert.alert("Success", "Comment deleted");
     } catch (error) {
-      Alert.alert("Error", "Failed to delete comment");
+      Alert.alert("Error", "Error deleting comment");
       console.log(error);
     }
   };
@@ -566,7 +602,11 @@ export default function ProfileScreen() {
     setPostText(selectedPost.text || "");
     setVenueName(selectedPost.venue_name || "");
     setLocationName(selectedPost.location_name || "");
+    setPostCity(selectedPost.city || "");
+    setPostCountry(selectedPost.country || "");
+    setPostVisibility(selectedPost.visibility || "public");
     setPostMedia(null); // Will show existing media from selectedPost
+    setMediaRemoved(false);
     setIsEditingPost(true);
   };
 
@@ -582,6 +622,12 @@ export default function ProfileScreen() {
       let mediaUrl = selectedPost?.media_url || "";
       let mediaType = selectedPost?.media_type || "note";
 
+      // Handle media removal
+      if (mediaRemoved && !postMedia) {
+        mediaUrl = "";
+        mediaType = "note";
+      }
+
       // If new media is selected, upload it
       if (postMedia) {
         mediaUrl = await uploadToCloudinary(postMedia.uri, postMedia.type);
@@ -594,6 +640,9 @@ export default function ProfileScreen() {
         media_type: mediaType as any,
         venue_name: venueName,
         location_name: locationName,
+        city: postCity,
+        country: postCountry,
+        visibility: postVisibility,
       });
 
       Alert.alert("Success", "Post updated successfully!");
@@ -601,6 +650,7 @@ export default function ProfileScreen() {
       setEditingPostId(null);
       setPostText("");
       setPostMedia(null);
+      setMediaRemoved(false);
       setVenueName("");
       setLocationName("");
       setVenueResults([]);
@@ -686,6 +736,10 @@ export default function ProfileScreen() {
           isSearchingLocation={isSearchingLocation}
           creating={creating}
           videoPlayer={createPlayer}
+          postCity={postCity}
+          postCountry={postCountry}
+          visibility={postVisibility}
+          onVisibilityChange={setPostVisibility}
           onClose={() => setIsCreatingPost(false)}
           onPostTextChange={setPostText}
           onPickMedia={pickPostMedia}
@@ -710,17 +764,28 @@ export default function ProfileScreen() {
           isSearchingLocation={isSearchingLocation}
           updating={updating}
           videoPlayer={editPlayer}
+          postCity={postCity}
+          postCountry={postCountry}
+          visibility={postVisibility}
+          onVisibilityChange={setPostVisibility}
           onClose={() => {
             setIsEditingPost(false);
             setEditingPostId(null);
             setPostText("");
             setPostMedia(null);
+            setMediaRemoved(false);
             setVenueName("");
             setLocationName("");
+            setPostCity("");
+            setPostCountry("");
+            setPostVisibility("public");
           }}
           onPostTextChange={setPostText}
           onPickMedia={pickPostMedia}
-          onRemoveMedia={() => setPostMedia(null)}
+          onRemoveMedia={() => {
+            setPostMedia(null);
+            if (isEditingPost) setMediaRemoved(true);
+          }}
           onVenueSearch={handleSearchVenue}
           onLocationSearch={handleSearchLocation}
           onSelectVenue={selectVenue}

@@ -67,7 +67,7 @@ export default function Page() {
       })
 
       if (createdSessionId) {
-        setActive!({ session: createdSessionId })
+        await setActive!({ session: createdSessionId })
         router.replace('/')
       } else {
         // Use signIn or signUp for next steps such as MFA

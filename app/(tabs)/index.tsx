@@ -12,35 +12,34 @@ import {
 } from "react-native";
 
 import MapComponent, { Marker } from "@/components/MapComponent";
-import { useLocationContext } from "@/context/LocationContext";
+import { SignOutButton } from "@/components/SignOutButton";
+import { useMapContext } from "@/context/MapContext";
+import { database } from "@/services/database";
+import { LOCATION_TASK_NAME } from "@/services/locationTask";
+import { useUser } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import debounce from "lodash.debounce";
 import { reverseGeocode, searchAll } from "../../services/geoapify";
-import { Ionicons } from "@expo/vector-icons";
-import { useUser } from "@clerk/clerk-expo";
-import { useRouter } from "expo-router";
-import * as Location from "expo-location";
-import type { LocationSubscription } from "expo-location";
-import { database } from "@/services/database";
-import { SignOutButton } from "@/components/SignOutButton";
-
 
 export default function Index() {
   const mapRef = useRef<any>(null);
   const router = useRouter();
   const { user: clerkUser } = useUser();
-  const { userLocation, updateLocation } = useLocationContext();
+  const { userLocation, setUserLocation: updateLocation } = useMapContext();
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
-  const [isSettingsLoading, setIsSettingsLoading] = useState(false);
 
   const hasInitialLocation = useRef(false);
-  const trackingSubscription = useRef<LocationSubscription | null>(null);
+  const trackingSubscription = useRef<any>(null); // For foreground fallback
   const interestsRef = useRef<string[]>([]);
-  const userIdRef = useRef<string | null>(null);
+  const toggleRequestId = useRef(0);
   const fallbackRegion = {
     latitude: 37.7749,
     longitude: -122.4194,
@@ -48,117 +47,131 @@ export default function Index() {
     longitudeDelta: 0.05,
   };
 
-  useEffect(() => {
-    userIdRef.current = clerkUser?.id ?? null;
-  }, [clerkUser]);
+  const startForegroundWatch = useCallback(
+    async (userId: string) => {
+      if (trackingSubscription.current) return;
 
-  const stopTracking = useCallback(() => {
-    if (trackingSubscription.current) {
-      trackingSubscription.current.remove();
-      trackingSubscription.current = null;
-    }
-  }, []);
-
-  const startTracking = useCallback(async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== "granted") {
-        setIsLocationEnabled(false);
-        return;
-      }
-
-      if (trackingSubscription.current) {
-        trackingSubscription.current.remove();
-      }
-
-      trackingSubscription.current = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.Balanced,
-          distanceInterval: 25,
-          timeInterval: 10000,
-        },
-        async (location) => {
-          const { latitude, longitude } = location.coords;
-          updateLocation(latitude, longitude);
-
-          const userId = userIdRef.current;
-          if (userId) {
+      try {
+        trackingSubscription.current = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 10000,
+            distanceInterval: 50,
+          },
+          async (location) => {
+            updateLocation({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            });
             try {
               await database.updateLiveLocation(
                 userId,
-                latitude,
-                longitude,
+                location.coords.latitude,
+                location.coords.longitude,
                 interestsRef.current,
               );
             } catch (err) {
-              console.error("Failed to update live location", err);
+              console.error("Foreground DB update failed", err);
             }
-          }
-        },
-      );
-    } catch (error) {
-      console.error("Error in tracking:", error);
-      setIsLocationEnabled(false);
-    }
-  }, [updateLocation]);
-
-  const loadSettings = useCallback(async () => {
-    if (!clerkUser) return;
-
-    setIsSettingsLoading(true);
-    try {
-      const profile = await database.getProfile(clerkUser.id);
-
-      if (profile) {
-        const enabled = !!profile.is_live_tracking;
-        setIsLocationEnabled(enabled);
-        interestsRef.current = profile.interests || [];
-
-        if (enabled) {
-          await startTracking();
-        }
+          },
+        );
+      } catch (e) {
+        console.error("Failed to start foreground watch", e);
       }
-    } catch (error) {
-      console.error("Error loading settings:", error);
-    } finally {
-      setIsSettingsLoading(false);
-    }
-  }, [clerkUser, startTracking]);
+    },
+    [updateLocation],
+  );
 
   useEffect(() => {
-    if (clerkUser) {
-      loadSettings();
-    }
-
-    return () => {
-      stopTracking();
-    };
-  }, [clerkUser, loadSettings, stopTracking]);
+    (async () => {
+      try {
+        const isRegistered =
+          await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+        if (isRegistered) {
+          // console.log("Stopping lingering background location task...");
+          await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+        }
+      } catch (e) {
+        console.error("Failed to stop lingering background location task", e);
+      }
+    })();
+  }, []);
 
   const handleToggleLocation = async (value: boolean) => {
     const previous = isLocationEnabled;
+    const currentRequestId = ++toggleRequestId.current;
+
+    // Optimistic update
     setIsLocationEnabled(value);
 
-    if (!clerkUser) return;
-
-    try {
-      await database.updateProfile(clerkUser.id, {
-        is_live_tracking: value,
-        interests: interestsRef.current,
-      });
-    } catch (error) {
-      console.error("Failed to update tracking status", error);
-      setIsLocationEnabled(previous);
+    if (!clerkUser) {
+      if (value) {
+        setIsLocationEnabled(false);
+      }
       return;
     }
 
-    if (value) {
-      await startTracking();
-    } else {
-      stopTracking();
+    try {
+      if (value) {
+        // Start Tracking
+        const { status: fgStatus } =
+          await Location.requestForegroundPermissionsAsync();
+        if (fgStatus !== "granted") {
+          throw new Error("Foreground location permission denied");
+        }
+
+        // Start Foreground Watch immediately (works in Expo Go)
+        await startForegroundWatch(clerkUser.id);
+
+        // Background Tracking disabled for now
+        /*
+        try {
+          const { status: bgStatus } =
+            await Location.requestBackgroundPermissionsAsync();
+          if (bgStatus === "granted") {
+            // ...
+          }
+        } catch (bgError) {
+          console.warn("Background tracking failed", bgError);
+        }
+        */
+
+        await database.updateProfile(clerkUser.id, {
+          is_live_tracking: true,
+          interests: interestsRef.current || [],
+        });
+      } else {
+        // Stop Tracking
+        if (trackingSubscription.current) {
+          trackingSubscription.current.remove();
+          trackingSubscription.current = null;
+        }
+
+        // Stop background task if it was running (to clear notification)
+        const isRegistered =
+          await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+        if (isRegistered) {
+          await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+        }
+
+        await database.updateProfile(clerkUser.id, {
+          is_live_tracking: false,
+          interests: interestsRef.current || [],
+        });
+
+        await SecureStore.deleteItemAsync("current_user_id");
+      }
+    } catch (error) {
+      console.error("Failed to toggle tracking", error);
+      setIsLocationEnabled(previous); // Revert UI
+      return;
+    }
+
+    if (currentRequestId !== toggleRequestId.current) {
+      return;
     }
   };
+
   // Sync map with user location shared from profile
   useEffect(() => {
     if (userLocation && !hasInitialLocation.current) {
@@ -196,6 +209,18 @@ export default function Index() {
     if (text.trim().length === 0) {
       setResults([]);
       debouncedSearch.cancel();
+      setSelectedPlace(null);
+
+      const targetLocation = userLocation || fallbackRegion;
+      mapRef.current?.animateToRegion(
+        {
+          latitude: targetLocation.latitude,
+          longitude: targetLocation.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        },
+        1000,
+      );
     } else {
       debouncedSearch(text);
     }
@@ -269,6 +294,16 @@ export default function Index() {
             : fallbackRegion
         }
       >
+        {userLocation && (
+          <Marker
+            coordinate={{
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude,
+            }}
+            title="My Location"
+            pinColor="blue"
+          />
+        )}
         {selectedPlace && (
           <Marker
             coordinate={{
@@ -348,7 +383,7 @@ export default function Index() {
                 thumbColor={isLocationEnabled ? "#6366f1" : "#f1f5f9"}
                 onValueChange={handleToggleLocation}
                 value={isLocationEnabled}
-                disabled={isSettingsLoading || !clerkUser}
+                disabled={!clerkUser}
               />
             </View>
           </View>
