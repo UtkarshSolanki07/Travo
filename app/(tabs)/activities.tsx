@@ -6,7 +6,7 @@ import { database, type Activity } from "@/services/database";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -34,21 +34,56 @@ const ActivitiesScreen = () => {
 
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
-  const fetchNearbyActivities = useCallback(async () => {
-    if (!userLocation) return;
+  const lastFetchedLocation = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const lastFetchTimestamp = useRef<number>(0);
+  const FETCH_DISTANCE_THRESHOLD = 0.5; // km
+  const FETCH_TIME_THRESHOLD = 30000; // 30s
 
-    try {
-      const activities = await database.getActivities({
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-        radiusKm: 50,
-        status: "upcoming",
-      });
-      setNearbyActivities(activities);
-    } catch (error) {
-      console.error("Failed to fetch nearby activities:", error);
-    }
-  }, [userLocation]);
+  const fetchNearbyActivities = useCallback(
+    async (options?: { forceImmediate?: boolean }) => {
+      if (!userLocation) return;
+
+      const now = Date.now();
+      const timeSinceLastFetch = now - lastFetchTimestamp.current;
+
+      if (!options?.forceImmediate && lastFetchedLocation.current) {
+        const distanceMoved = database.calculateDistance(
+          lastFetchedLocation.current.latitude,
+          lastFetchedLocation.current.longitude,
+          userLocation.latitude,
+          userLocation.longitude,
+        );
+
+        if (
+          distanceMoved < FETCH_DISTANCE_THRESHOLD &&
+          timeSinceLastFetch < FETCH_TIME_THRESHOLD
+        ) {
+          return;
+        }
+      }
+
+      try {
+        const activities = await database.getActivities({
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          radiusKm: 50,
+          status: "upcoming",
+        });
+        setNearbyActivities(activities);
+        lastFetchedLocation.current = {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+        };
+        lastFetchTimestamp.current = now;
+      } catch (error) {
+        console.error("Failed to fetch nearby activities:", error);
+      }
+    },
+    [userLocation],
+  );
 
   const fetchUserActivities = useCallback(async () => {
     if (!user?.id) return;
@@ -68,13 +103,16 @@ const ActivitiesScreen = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchNearbyActivities(), fetchUserActivities()]);
+    await Promise.all([
+      fetchNearbyActivities({ forceImmediate: true }),
+      fetchUserActivities(),
+    ]);
     setRefreshing(false);
   }, [fetchNearbyActivities, fetchUserActivities]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchNearbyActivities();
+      fetchNearbyActivities({ forceImmediate: true });
       fetchUserActivities();
     }, [fetchNearbyActivities, fetchUserActivities]),
   );
@@ -124,7 +162,7 @@ const ActivitiesScreen = () => {
             try {
               await database.deleteActivity(activityId);
               await fetchUserActivities();
-              await fetchNearbyActivities();
+              await fetchNearbyActivities({ forceImmediate: true });
             } catch (error) {
               console.error("Delete error:", error);
               Alert.alert("Error", "Failed to delete activity");
@@ -135,7 +173,7 @@ const ActivitiesScreen = () => {
     );
   };
 
-  const renderActivity = ({ item }: { item: any }) => {
+  const renderActivity = ({ item }: { item: Activity }) => {
     const isAdmin = item.creator_id === user?.id;
 
     return (
@@ -283,7 +321,10 @@ const ActivitiesScreen = () => {
       <ActivityDetailsModal
         activity={selectedActivity}
         visible={!!selectedActivity}
-        onClose={() => setSelectedActivity(null)}
+        onClose={() => {
+          setSelectedActivity(null);
+          onRefresh();
+        }}
       />
       <CreateActivityModal
         visible={isEditModalVisible}
@@ -296,7 +337,7 @@ const ActivitiesScreen = () => {
           setIsEditModalVisible(false);
           setEditingActivity(null);
           await fetchUserActivities();
-          await fetchNearbyActivities();
+          await fetchNearbyActivities({ forceImmediate: true });
         }}
       />
     </View>

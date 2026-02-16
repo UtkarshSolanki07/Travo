@@ -160,7 +160,12 @@ export default function ModeOfTransport({
     ];
   }, [distanceKm, driveDurationMin, timeOfDay]);
 
-  if (!Number.isFinite(distanceKm) || !Number.isFinite(driveDurationMin))
+  if (
+    !Number.isFinite(distanceKm) ||
+    !Number.isFinite(driveDurationMin) ||
+    distanceKm < 0 ||
+    driveDurationMin < 0
+  )
     return null;
 
   return (

@@ -205,29 +205,35 @@ export default function CreatePostModal({
 
             {venueResults.length > 0 && (
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
-                {venueResults.map((item, index) => (
-                  <TouchableOpacity
-                    key={item.place_id || item.id || index}
-                    className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
-                    onPress={() => onSelectVenue(item)}
-                  >
-                    <Ionicons name="pin-outline" size={16} color="#64748b" />
-                    <View className="flex-1">
-                      <Text
-                        className="text-[14px] font-semibold text-slate-800"
-                        numberOfLines={1}
-                      >
-                        {item.text}
-                      </Text>
-                      <Text
-                        className="text-[11px] text-slate-500"
-                        numberOfLines={1}
-                      >
-                        {item.place_name}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                {venueResults.map((item, index) => {
+                  const primaryLabel = item.text ?? item.place_name ?? "";
+                  return (
+                    <TouchableOpacity
+                      key={item.place_id || item.id || index}
+                      className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
+                      onPress={() => onSelectVenue(item)}
+                    >
+                      <Ionicons name="pin-outline" size={16} color="#64748b" />
+                      <View className="flex-1">
+                        <Text
+                          className="text-[14px] font-semibold text-slate-800"
+                          numberOfLines={1}
+                        >
+                          {primaryLabel}
+                        </Text>
+                        {item.place_name &&
+                          item.place_name !== primaryLabel && (
+                            <Text
+                              className="text-[11px] text-slate-500"
+                              numberOfLines={1}
+                            >
+                              {item.place_name}
+                            </Text>
+                          )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
 
@@ -246,29 +252,35 @@ export default function CreatePostModal({
 
             {locationResults.length > 0 && (
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
-                {locationResults.map((item, index) => (
-                  <TouchableOpacity
-                    key={item.place_id || item.id || index}
-                    className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
-                    onPress={() => onSelectLocation(item)}
-                  >
-                    <Ionicons name="map-outline" size={16} color="#64748b" />
-                    <View className="flex-1">
-                      <Text
-                        className="text-[14px] font-semibold text-slate-800"
-                        numberOfLines={1}
-                      >
-                        {item.text}
-                      </Text>
-                      <Text
-                        className="text-[11px] text-slate-500"
-                        numberOfLines={1}
-                      >
-                        {item.place_name}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                {locationResults.map((item, index) => {
+                  const primaryLabel = item.text ?? item.place_name ?? "";
+                  return (
+                    <TouchableOpacity
+                      key={item.place_id || item.id || index}
+                      className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
+                      onPress={() => onSelectLocation(item)}
+                    >
+                      <Ionicons name="map-outline" size={16} color="#64748b" />
+                      <View className="flex-1">
+                        <Text
+                          className="text-[14px] font-semibold text-slate-800"
+                          numberOfLines={1}
+                        >
+                          {primaryLabel}
+                        </Text>
+                        {item.place_name &&
+                          item.place_name !== primaryLabel && (
+                            <Text
+                              className="text-[11px] text-slate-500"
+                              numberOfLines={1}
+                            >
+                              {item.place_name}
+                            </Text>
+                          )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </ScrollView>

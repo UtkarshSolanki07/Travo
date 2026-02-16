@@ -160,7 +160,6 @@ export default function CreateActivityModal({
       return;
     }
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsSubmitting(true);
 
     try {
@@ -177,6 +176,7 @@ export default function CreateActivityModal({
             : 10,
           visibility,
         });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert("Success", "Activity updated successfully!");
         await onActivityUpdated?.();
       } else {
@@ -198,6 +198,7 @@ export default function CreateActivityModal({
           visibility,
           status: "upcoming",
         });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert("Success", "Activity created successfully!");
         await onActivityCreated?.();
       }

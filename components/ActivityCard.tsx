@@ -47,15 +47,15 @@ export default function ActivityCard({
   const getStatusColor = () => {
     switch (activity.status) {
       case "upcoming":
-        return "bg-blue-100 text-blue-700";
+        return {bg:"bg-blue-100",text:"text-blue-700"};
       case "ongoing":
-        return "bg-green-100 text-green-700";
+        return {bg:"bg-green-100",text:"text-green-700"};
       case "completed":
-        return "bg-gray-100 text-gray-700";
+        return {bg:"bg-gray-100",text:"text-gray-700"};
       case "cancelled":
-        return "bg-red-100 text-red-700";
+        return {bg:"bg-red-100",text:"text-red-700"};
       default:
-        return "bg-gray-100 text-gray-700";
+        return {bg:"bg-gray-100",text:"text-gray-700"};
     }
   };
 
@@ -76,8 +76,8 @@ export default function ActivityCard({
             </Text>
           )}
         </View>
-        <View className={`px-2 py-1 rounded-lg ${getStatusColor()}`}>
-          <Text className="text-xs font-semibold capitalize">
+        <View className={`px-2 py-1 rounded-lg ${getStatusColor().bg}`}>
+          <Text className={`text-xs font-semibold capitalize ${getStatusColor().text}`}>
             {activity.status}
           </Text>
         </View>

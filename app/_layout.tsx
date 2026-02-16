@@ -10,7 +10,7 @@ import { database } from "../services/database";
 const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 if (!CLERK_PUBLISHABLE_KEY) {
-  console.error(
+  throw new Error(
     "Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in environment variables.",
   );
 }

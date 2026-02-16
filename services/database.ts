@@ -53,6 +53,7 @@ export interface Activity {
   max_participants: number;
   visibility: ActivityVisibility;
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  participant_count?: number;
   created_at?: string;
 }
 

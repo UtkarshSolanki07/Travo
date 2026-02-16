@@ -77,6 +77,14 @@ const MapScreen = () => {
   }, [route]);
 
   const interestsRef = useRef<string[]>([]);
+  const lastRoutePosition = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const lastRouteTimestamp = useRef<number>(0);
+  const lastSelectedLocationId = useRef<string | null>(null);
+  const ROUTE_DISTANCE_THRESHOLD = 0.05; // 50m
+  const ROUTE_TIME_THRESHOLD = 15000; // 15s
 
   const fallbackRegion = {
     latitude: 37.7749,
@@ -251,8 +259,11 @@ const MapScreen = () => {
 
         // 2. Sync profile and resume tracking if needed
         const profile = await database.getProfile(clerkUser.id);
-        if (profile?.is_live_tracking) {
-          handleToggleLocation(true);
+        if (profile) {
+          interestsRef.current = profile.interests || [];
+          if (profile.is_live_tracking) {
+            handleToggleLocation(true);
+          }
         }
       } catch (e) {
         console.error("App init failed", e);
@@ -316,7 +327,12 @@ const MapScreen = () => {
   useFocusEffect(
     useCallback(() => {
       fetchActivities();
-    }, [fetchActivities]),
+      if (clerkUser) {
+        database.getProfile(clerkUser.id).then((profile) => {
+          if (profile) interestsRef.current = profile.interests || [];
+        });
+      }
+    }, [fetchActivities, clerkUser]),
   );
 
   const handleActivityCreated = () => {
@@ -327,10 +343,36 @@ const MapScreen = () => {
   useEffect(() => {
     if (!userLocation || !selectedLocation) {
       setRoute(null);
+      lastRoutePosition.current = null;
+      lastRouteTimestamp.current = 0;
+      lastSelectedLocationId.current = null;
       return;
     }
 
     const run = async () => {
+      const now = Date.now();
+      const timeSinceLastFetch = now - lastRouteTimestamp.current;
+      const selectedId =
+        selectedLocation.formattedAddress ||
+        `${selectedLocation.latitude}-${selectedLocation.longitude}`;
+      const destinationChanged = selectedId !== lastSelectedLocationId.current;
+
+      if (!destinationChanged && lastRoutePosition.current) {
+        const distanceMoved = database.calculateDistance(
+          lastRoutePosition.current.latitude,
+          lastRoutePosition.current.longitude,
+          userLocation.latitude,
+          userLocation.longitude,
+        );
+
+        if (
+          distanceMoved < ROUTE_DISTANCE_THRESHOLD &&
+          timeSinceLastFetch < ROUTE_TIME_THRESHOLD
+        ) {
+          return;
+        }
+      }
+
       const result = await getRoute(
         { latitude: userLocation.latitude, longitude: userLocation.longitude },
         {
@@ -339,6 +381,12 @@ const MapScreen = () => {
         },
       );
       setRoute(result);
+      lastRoutePosition.current = {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+      };
+      lastRouteTimestamp.current = now;
+      lastSelectedLocationId.current = selectedId;
     };
 
     run();

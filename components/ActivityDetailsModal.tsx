@@ -41,6 +41,9 @@ export default function ActivityDetailsModal({
   const [selectedRequesterId, setSelectedRequesterId] = useState<string | null>(
     null,
   );
+  const [displayActivity, setDisplayActivity] = useState<Activity | null>(
+    activity,
+  );
   const [editModalVisible, setEditModalVisible] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -50,17 +53,21 @@ export default function ActivityDetailsModal({
       const isAdminUser = activity.creator_id === clerkUser.id;
       setIsAdmin(isAdminUser);
 
-      const [pData, rData, status] = await Promise.all([
+      const [pData, rData, status, freshActivity] = await Promise.all([
         database.getActivityParticipants(activity.id),
         isAdminUser
           ? database.getJoinRequests(activity.id, clerkUser.id)
           : Promise.resolve([]),
         database.getParticipantStatus(activity.id, clerkUser.id),
+        database.getActivityById(activity.id),
       ]);
 
       setParticipants(pData);
       setRequests(rData);
       setUserStatus(status);
+      if (freshActivity) {
+        setDisplayActivity(freshActivity);
+      }
     } catch (error) {
       console.error("fetchData error:", error);
     } finally {
@@ -70,6 +77,7 @@ export default function ActivityDetailsModal({
 
   useEffect(() => {
     if (visible && activity) {
+      setDisplayActivity(activity);
       fetchData();
     }
   }, [visible, activity, fetchData]);
@@ -200,7 +208,7 @@ export default function ActivityDetailsModal({
     }
   };
 
-  if (!activity) return null;
+  if (!displayActivity) return null;
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -226,7 +234,7 @@ export default function ActivityDetailsModal({
                 {/* Main Info */}
                 <View className="mb-6">
                   <Text className="text-2xl font-bold text-slate-900 mb-2">
-                    {activity.title}
+                    {displayActivity.title}
                   </Text>
                   <View className="flex-row items-center mb-2">
                     <Ionicons
@@ -236,12 +244,12 @@ export default function ActivityDetailsModal({
                     />
                     <Text className="text-slate-600 ml-2">
                       {format(
-                        new Date(activity.start_time),
+                        new Date(displayActivity.start_time),
                         "EEEE, MMMM do, h:mm a",
                       )}
                     </Text>
                   </View>
-                  {activity.city && (
+                  {displayActivity.city && (
                     <View className="flex-row items-center mb-2">
                       <Ionicons
                         name="location-outline"
@@ -249,20 +257,20 @@ export default function ActivityDetailsModal({
                         color="#6366f1"
                       />
                       <Text className="text-slate-600 ml-2">
-                        {activity.city}
+                        {displayActivity.city}
                       </Text>
                     </View>
                   )}
                 </View>
 
                 {/* Description */}
-                {activity.description && (
+                {displayActivity.description && (
                   <View className="mb-6">
                     <Text className="text-sm font-bold text-slate-900 uppercase mb-2">
                       About
                     </Text>
                     <Text className="text-slate-600 leading-5">
-                      {activity.description}
+                      {displayActivity.description}
                     </Text>
                   </View>
                 )}
@@ -274,7 +282,7 @@ export default function ActivityDetailsModal({
                       Participants
                     </Text>
                     <Text className="text-lg font-bold text-slate-900">
-                      {participants.length} / {activity.max_participants}
+                      {participants.length} / {displayActivity.max_participants}
                     </Text>
                   </View>
                   <View className="flex-1">
@@ -282,7 +290,7 @@ export default function ActivityDetailsModal({
                       Visibility
                     </Text>
                     <Text className="text-lg font-bold text-slate-900 capitalize">
-                      {activity.visibility}
+                      {displayActivity.visibility}
                     </Text>
                   </View>
                 </View>
@@ -311,16 +319,21 @@ export default function ActivityDetailsModal({
                         onPress={handleJoinRequest}
                         disabled={
                           actionLoading ||
-                          participants.length >= activity.max_participants
+                          participants.length >=
+                            displayActivity.max_participants
                         }
                         className={`py-4 rounded-2xl items-center ${
-                          participants.length >= activity.max_participants
+                          participants.length >=
+                          displayActivity.max_participants
                             ? "bg-slate-200"
                             : "bg-indigo-600"
                         }`}
                       >
-                        <Text className="text-white font-bold text-base">
-                          {participants.length >= activity.max_participants
+                        <Text
+                          className={`font-bold text-base ${participants.length >= displayActivity.max_participants ? "text-slate-600" : "text-white"}`}
+                        >
+                          {participants.length >=
+                          displayActivity.max_participants
                             ? "Activity Full"
                             : "Request to Join"}
                         </Text>
@@ -454,7 +467,7 @@ export default function ActivityDetailsModal({
                         <View className="ml-4">
                           <Text className="text-sm font-bold text-slate-900">
                             {p.user?.display_name || "User"}{" "}
-                            {p.user_id === activity.creator_id && (
+                            {p.user_id === displayActivity.creator_id && (
                               <Text className="text-indigo-600 font-normal">
                                 (Admin)
                               </Text>
@@ -522,7 +535,7 @@ export default function ActivityDetailsModal({
           <CreateActivityModal
             visible={editModalVisible}
             onClose={() => setEditModalVisible(false)}
-            initialData={activity}
+            initialData={displayActivity || undefined}
             onActivityUpdated={async () => {
               setEditModalVisible(false);
               await fetchData();

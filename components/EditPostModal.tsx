@@ -1,18 +1,19 @@
 import { getOptimizedUrl } from "@/lib/cloudinary";
 import { Post } from "@/services/database";
 import { Ionicons } from "@expo/vector-icons";
-import { VideoView } from "expo-video";
+import { VideoView, useVideoPlayer } from "expo-video";
+
 import {
-    ActivityIndicator,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface PlaceResult {
@@ -35,7 +36,7 @@ interface EditPostModalProps {
   isSearchingVenue: boolean;
   isSearchingLocation: boolean;
   updating: boolean;
-  videoPlayer: any;
+  videoPlayer: ReturnType<typeof useVideoPlayer> | null;
   onClose: () => void;
   onPostTextChange: (text: string) => void;
   onPickMedia: () => void;
@@ -46,8 +47,8 @@ interface EditPostModalProps {
   postCountry?: string;
   visibility: "public" | "friends";
   onVisibilityChange: (value: "public" | "friends") => void;
-  onSelectVenue: (place: any) => void;
-  onSelectLocation: (place: any) => void;
+  onSelectVenue: (place: PlaceResult) => void;
+  onSelectLocation: (place: PlaceResult) => void;
   onUpdatePost: () => void;
 }
 
@@ -108,13 +109,19 @@ export default function EditPostModal({
               {postMedia ? (
                 <View className="w-full h-full relative">
                   {postMedia.type === "video" ? (
-                    <VideoView
-                      style={{ width: "100%", height: "100%" }}
-                      player={videoPlayer}
-                      allowsFullscreen
-                      allowsPictureInPicture
-                      nativeControls
-                    />
+                    videoPlayer ? (
+                      <VideoView
+                        style={{ width: "100%", height: "100%" }}
+                        player={videoPlayer}
+                        allowsFullscreen
+                        allowsPictureInPicture
+                        nativeControls
+                      />
+                    ) : (
+                      <View className="w-full h-full items-center justify-center bg-slate-200">
+                        <ActivityIndicator size="small" color="#6366f1" />
+                      </View>
+                    )
                   ) : (
                     <Image
                       source={{ uri: postMedia.uri }}
@@ -131,13 +138,19 @@ export default function EditPostModal({
               ) : existingMediaUrl ? (
                 <View className="w-full h-full relative">
                   {existingMediaType === "video" ? (
-                    <VideoView
-                      style={{ width: "100%", height: "100%" }}
-                      player={videoPlayer}
-                      allowsFullscreen
-                      allowsPictureInPicture
-                      nativeControls
-                    />
+                    videoPlayer ? (
+                      <VideoView
+                        style={{ width: "100%", height: "100%" }}
+                        player={videoPlayer}
+                        allowsFullscreen
+                        allowsPictureInPicture
+                        nativeControls
+                      />
+                    ) : (
+                      <View className="w-full h-full items-center justify-center bg-slate-200">
+                        <ActivityIndicator size="small" color="#6366f1" />
+                      </View>
+                    )
                   ) : (
                     <Image
                       source={{
@@ -236,21 +249,35 @@ export default function EditPostModal({
 
             {venueResults.length > 0 && (
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
-                {venueResults.map((item, index) => (
-                  <TouchableOpacity
-                    key={item.place_id || item.id || index}
-                    className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
-                    onPress={() => onSelectVenue(item)}
-                  >
-                    <Ionicons name="pin-outline" size={16} color="#64748b" />
-                    <Text
-                      className="text-[13px] text-slate-600 flex-1"
-                      numberOfLines={1}
+                {venueResults.map((item, index) => {
+                  const primaryLabel = item.text ?? item.place_name ?? "";
+                  return (
+                    <TouchableOpacity
+                      key={item.place_id || item.id || index}
+                      className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
+                      onPress={() => onSelectVenue(item)}
                     >
-                      {item.place_name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Ionicons name="pin-outline" size={16} color="#64748b" />
+                      <View className="flex-1">
+                        <Text
+                          className="text-[14px] font-semibold text-slate-800"
+                          numberOfLines={1}
+                        >
+                          {primaryLabel}
+                        </Text>
+                        {item.place_name &&
+                          item.place_name !== primaryLabel && (
+                            <Text
+                              className="text-[11px] text-slate-500"
+                              numberOfLines={1}
+                            >
+                              {item.place_name}
+                            </Text>
+                          )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
 
@@ -269,21 +296,35 @@ export default function EditPostModal({
 
             {locationResults.length > 0 && (
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
-                {locationResults.map((item, index) => (
-                  <TouchableOpacity
-                    key={item.place_id || item.id || index}
-                    className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
-                    onPress={() => onSelectLocation(item)}
-                  >
-                    <Ionicons name="map-outline" size={16} color="#64748b" />
-                    <Text
-                      className="text-[13px] text-slate-600 flex-1"
-                      numberOfLines={1}
+                {locationResults.map((item, index) => {
+                  const primaryLabel = item.text ?? item.place_name ?? "";
+                  return (
+                    <TouchableOpacity
+                      key={item.place_id || item.id || index}
+                      className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
+                      onPress={() => onSelectLocation(item)}
                     >
-                      {item.place_name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Ionicons name="map-outline" size={16} color="#64748b" />
+                      <View className="flex-1">
+                        <Text
+                          className="text-[14px] font-semibold text-slate-800"
+                          numberOfLines={1}
+                        >
+                          {primaryLabel}
+                        </Text>
+                        {item.place_name &&
+                          item.place_name !== primaryLabel && (
+                            <Text
+                              className="text-[11px] text-slate-500"
+                              numberOfLines={1}
+                            >
+                              {item.place_name}
+                            </Text>
+                          )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </ScrollView>
