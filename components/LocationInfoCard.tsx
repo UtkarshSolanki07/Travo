@@ -12,6 +12,19 @@ interface LocationInfoCardProps {
   onCreateActivity: () => void;
 }
 
+/**
+ * Renders a floating location information card displaying name, optional address, ETA/distance, an optional transport summary, and a button to create an activity.
+ *
+ * @param name - Primary location name displayed prominently
+ * @param address - Optional secondary address displayed below the name
+ * @param eta - Optional arrival time label shown on the right side
+ * @param distance - Optional human-readable distance label shown on the right side
+ * @param distanceKm - Optional numeric distance (kilometers) used to render the ModeOfTransport summary; required alongside `driveDurationMin` to show that section
+ * @param driveDurationMin - Optional driving duration (minutes) used to render the ModeOfTransport summary; required alongside `distanceKm` to show that section
+ * @param onCreateActivity - Callback invoked when the "Create a New Activity" button is pressed
+ *
+ * @returns The rendered JSX element for the location information card
+ */
 export default function LocationInfoCard({
   name,
   address,

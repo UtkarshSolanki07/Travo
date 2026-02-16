@@ -28,6 +28,16 @@ const isPeakHour = (date: Date = new Date()) => {
   return (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19);
 };
 
+/**
+ * Render a horizontal row of four transport mode tiles with estimated durations for Drive, Transit, Bike, and Walk.
+ *
+ * Estimates use heuristics based on `distanceKm`, a baseline `driveDurationMin`, and peak-hour adjustments driven by `timeOfDay`.
+ *
+ * @param distanceKm - Distance in kilometers used to compute mode-specific duration estimates
+ * @param driveDurationMin - Baseline driving duration in minutes (used as the routing baseline for other modes)
+ * @param timeOfDay - Optional Date used to determine peak-hour adjustments; when omitted, the current time is used
+ * @returns A React element containing four mode options with estimated durations, or `null` if `distanceKm` or `driveDurationMin` are falsy
+ */
 export default function ModeOfTransport({
   distanceKm,
   driveDurationMin,

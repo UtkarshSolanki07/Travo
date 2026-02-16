@@ -22,6 +22,16 @@ interface PostsGridProps {
   onPostPress: (post: Post) => void;
 }
 
+/**
+ * Render a responsive three-column grid of posts, showing thumbnails for media, a text fallback, and dedicated loading and empty states.
+ *
+ * @param posts - Array of Post objects to display in the grid.
+ * @param loading - When true, displays a centered activity indicator instead of the grid.
+ * @param emptyMessage - Message shown when `posts` is empty and not loading.
+ * @param emptyIcon - Ionicons icon name shown above the empty message.
+ * @param onPostPress - Callback invoked with a Post when a tile is pressed.
+ * @returns The rendered React element for the posts grid.
+ */
 export default function PostsGrid({
   posts,
   loading,

@@ -47,6 +47,28 @@ interface CreatePostModalProps {
   onCreatePost: () => void;
 }
 
+/**
+ * Render a modal UI for composing and sharing a new post.
+ *
+ * Renders media picker (image or video), post text input, visibility toggles, venue/location search with results,
+ * optional city/country pill, and a footer action to publish the post.
+ *
+ * @param visible - Controls whether the modal is shown
+ * @param postMedia - Selected media to attach, or `null`. Shape: `{ uri: string; type: "image" | "video" }`
+ * @param videoPlayer - Video player controller returned from `useVideoPlayer`, used when rendering a video; may be `null`
+ * @param postCity - Optional city name to display in the location pill
+ * @param postCountry - Optional country name to display in the location pill
+ * @param visibility - Current post visibility, either `"public"` or `"friends"`
+ * @param onVisibilityChange - Callback invoked with the new visibility value
+ * @param onPickMedia - Callback to open media picker
+ * @param onRemoveMedia - Callback to remove the currently selected media
+ * @param onVenueSearch - Callback called with the venue search query
+ * @param onLocationSearch - Callback called with the location search query
+ * @param onSelectVenue - Callback invoked with a selected `PlaceResult` from venueResults
+ * @param onSelectLocation - Callback invoked with a selected `PlaceResult` from locationResults
+ * @param onCreatePost - Callback invoked to publish the post
+ * @returns The JSX element for the create-post modal
+ */
 export default function CreatePostModal({
   visible,
   postText,

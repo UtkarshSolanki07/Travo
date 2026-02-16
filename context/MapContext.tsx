@@ -21,6 +21,12 @@ interface MapContextType {
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
 
+/**
+ * Provides map-related state (user location, selected location, and search radius) to descendant components.
+ *
+ * @param children - React nodes to render inside the provider
+ * @returns A provider element that supplies `userLocation`, `selectedLocation`, `radiusKm` (defaults to 5), and their corresponding setter functions to its descendants
+ */
 export function MapProvider({ children }: { children: ReactNode }) {
   const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [selectedLocation, setSelectedLocation] =
@@ -43,6 +49,12 @@ export function MapProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Retrieves the current map context value for use within React components.
+ *
+ * @returns The map context object containing `userLocation`, `selectedLocation`, `radiusKm`, and their setter functions.
+ * @throws Error if called outside of a `MapProvider`
+ */
 export function useMapContext() {
   const context = useContext(MapContext);
   if (context === undefined) {

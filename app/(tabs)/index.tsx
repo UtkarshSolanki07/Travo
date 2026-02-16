@@ -24,6 +24,11 @@ import * as SecureStore from "expo-secure-store";
 import debounce from "lodash.debounce";
 import { reverseGeocode, searchAll } from "../../services/geoapify";
 
+/**
+ * Main map screen component that renders the interactive map, search UI, and live-tracking controls.
+ *
+ * @returns A JSX element rendering the map screen and its associated UI (search, markers, and menu).
+ */
 export default function Index() {
   const mapRef = useRef<any>(null);
   const router = useRouter();

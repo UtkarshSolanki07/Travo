@@ -2,6 +2,13 @@ export type LatLng = { latitude: number; longitude: number };
 
 const GEOAPIFY_API_KEY = process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY;
 
+/**
+ * Fetches a driving route between two coordinates from the Geoapify Routing API.
+ *
+ * @param origin - Starting coordinate with `latitude` and `longitude`
+ * @param destination - Ending coordinate with `latitude` and `longitude`
+ * @returns An object with `points` (array of `LatLng` in latitude/longitude order), `distanceKm` (route length in kilometers), and `durationMin` (estimated travel time in minutes), or `null` if the route could not be obtained
+ */
 export async function getRoute(
   origin: LatLng,
   destination: LatLng,

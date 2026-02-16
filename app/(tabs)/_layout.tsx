@@ -1,6 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
+/**
+ * Render the application's bottom tab navigator with configured screens and icons.
+ *
+ * The layout includes Map, Activities, Community, and Profile tabs (each with an Ionicons tab icon) and preserves a hidden legacy "index" route by setting its `href` to `null`.
+ *
+ * @returns The `Tabs` element representing the app's tab-based navigation layout
+ */
 export default function TabLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false }}>
