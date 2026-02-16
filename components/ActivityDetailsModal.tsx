@@ -1,17 +1,19 @@
+import CreateActivityModal from "@/components/CreateActivityModal";
 import { database, type Activity } from "@/services/database";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface ActivityDetailsModalProps {
@@ -34,6 +36,12 @@ export default function ActivityDetailsModal({
     "none",
   );
   const [actionLoading, setActionLoading] = useState(false);
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [selectedRequesterId, setSelectedRequesterId] = useState<string | null>(
+    null,
+  );
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!activity || !clerkUser) return;
@@ -100,24 +108,91 @@ export default function ActivityDetailsModal({
 
   const handleApprove = async (requesterId: string) => {
     if (!activity || !clerkUser) return;
+
+    Alert.alert(
+      "Confirm Approval",
+      "Are you sure you want to allow this user to join your activity?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Allow",
+          onPress: async () => {
+            try {
+              await database.approveJoinRequest(
+                activity.id,
+                requesterId,
+                clerkUser.id,
+              );
+              fetchData();
+            } catch (error) {
+              console.error("handleApprove error:", error);
+              Alert.alert("Error", "Failed to approve request");
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleReject = (requesterId: string) => {
+    setSelectedRequesterId(requesterId);
+    setRejectModalVisible(true);
+  };
+
+  const confirmReject = async () => {
+    if (!activity || !clerkUser || !selectedRequesterId) return;
+
     try {
-      await database.approveJoinRequest(activity.id, requesterId, clerkUser.id);
+      setActionLoading(true);
+      await database.rejectJoinRequest(
+        activity.id,
+        selectedRequesterId,
+        clerkUser.id,
+      );
+      // In a real app, we'd save rejectReason somewhere or send it as a notification.
+      // For now, we just log it and close the modal.
+      console.log(
+        `Rejected ${selectedRequesterId} for reason: ${rejectReason}`,
+      );
+
+      setRejectModalVisible(false);
+      setRejectReason("");
+      setSelectedRequesterId(null);
       fetchData();
     } catch (error) {
-      console.error("handleApprove error:", error);
-      Alert.alert("Error", "Failed to approve request");
+      console.error("confirmReject error:", error);
+      Alert.alert("Error", "Failed to reject request");
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleReject = async (requesterId: string) => {
-    if (!activity || !clerkUser) return;
-    try {
-      await database.rejectJoinRequest(activity.id, requesterId, clerkUser.id);
-      fetchData();
-    } catch (error) {
-      console.error("handleReject error:", error);
-      Alert.alert("Error", "Failed to reject request");
-    }
+  const handleDelete = async () => {
+    if (!activity) return;
+
+    Alert.alert(
+      "Delete Activity",
+      "Are you sure you want to delete this activity? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setActionLoading(true);
+              await database.deleteActivity(activity.id);
+              onClose();
+            } catch (error) {
+              console.error("handleDelete error:", error);
+              Alert.alert("Error", "Failed to delete activity");
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   if (!activity) return null;
@@ -252,9 +327,39 @@ export default function ActivityDetailsModal({
                 {/* Admin Panel */}
                 {isAdmin && (
                   <View className="mb-6">
-                    <Text className="text-base font-bold text-slate-900 mb-4">
-                      Admin Dashboard
-                    </Text>
+                    <View className="flex-row items-center justify-between mb-4">
+                      <Text className="text-base font-bold text-slate-900">
+                        Admin Dashboard
+                      </Text>
+                      <View className="flex-row gap-2">
+                        <TouchableOpacity
+                          onPress={() => setEditModalVisible(true)}
+                          className="flex-row items-center bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100"
+                        >
+                          <Ionicons
+                            name="create-outline"
+                            size={16}
+                            color="#4f46e5"
+                          />
+                          <Text className="text-indigo-600 font-bold text-xs ml-1.5">
+                            Edit
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={handleDelete}
+                          className="flex-row items-center bg-red-50 px-3 py-1.5 rounded-lg border border-red-100"
+                        >
+                          <Ionicons
+                            name="trash-outline"
+                            size={16}
+                            color="#ef4444"
+                          />
+                          <Text className="text-red-600 font-bold text-xs ml-1.5">
+                            Delete
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
 
                     {/* Join Requests */}
                     <View className="mb-4">
@@ -361,6 +466,63 @@ export default function ActivityDetailsModal({
               </>
             )}
           </ScrollView>
+
+          {/* Rejection Reason Modal */}
+          <Modal
+            visible={rejectModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setRejectModalVisible(false)}
+          >
+            <View className="flex-1 bg-black/50 justify-center px-6">
+              <View className="bg-white rounded-3xl p-6 shadow-xl">
+                <Text className="text-lg font-bold text-slate-900 mb-2">
+                  Decline Request
+                </Text>
+                <Text className="text-slate-500 text-sm mb-4">
+                  Please state the reason for declining this participant.
+                </Text>
+
+                <TextInput
+                  className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 h-32 text-start vertical-align-top"
+                  placeholder="Reason..."
+                  multiline
+                  value={rejectReason}
+                  onChangeText={setRejectReason}
+                  textAlignVertical="top"
+                />
+
+                <View className="flex-row gap-3 mt-6">
+                  <TouchableOpacity
+                    onPress={() => setRejectModalVisible(false)}
+                    className="flex-1 py-3 items-center bg-slate-100 rounded-xl"
+                  >
+                    <Text className="text-slate-600 font-bold">Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={confirmReject}
+                    disabled={actionLoading || !rejectReason.trim()}
+                    className={`flex-1 py-3 items-center rounded-xl ${
+                      !rejectReason.trim() ? "bg-red-200" : "bg-red-600"
+                    }`}
+                  >
+                    <Text className="text-white font-bold">Decline</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Edit Activity Modal */}
+          <CreateActivityModal
+            visible={editModalVisible}
+            onClose={() => setEditModalVisible(false)}
+            initialData={activity}
+            onActivityUpdated={() => {
+              setEditModalVisible(false);
+              fetchData();
+            }}
+          />
         </View>
       </View>
     </Modal>

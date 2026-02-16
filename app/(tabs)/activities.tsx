@@ -1,5 +1,6 @@
 import ActivityCard from "@/components/ActivityCard";
 import ActivityDetailsModal from "@/components/ActivityDetailsModal";
+import CreateActivityModal from "@/components/CreateActivityModal";
 import { useMapContext } from "@/context/MapContext";
 import { database, type Activity } from "@/services/database";
 import { useUser } from "@clerk/clerk-expo";
@@ -7,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
+  Alert,
   FlatList,
   RefreshControl,
   Text,
@@ -27,6 +29,10 @@ const ActivitiesScreen = () => {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null,
   );
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   const fetchNearbyActivities = useCallback(async () => {
     if (!userLocation) return;
@@ -48,9 +54,13 @@ const ActivitiesScreen = () => {
     if (!user?.id) return;
 
     try {
-      const { created, joined } = await database.getUserActivities(user.id);
+      const [{ created, joined }, pending] = await Promise.all([
+        database.getUserActivities(user.id),
+        database.getPendingRequestsForUser(user.id),
+      ]);
       setMyActivities(created);
       setJoinedActivities(joined);
+      setPendingRequests(pending);
     } catch (error) {
       console.error("Failed to fetch user activities:", error);
     }
@@ -94,19 +104,60 @@ const ActivitiesScreen = () => {
 
   const handleActivityPress = (activity: Activity) => {
     setSelectedActivity(activity);
-    // TODO: Open ActivityDetailsModal
-    console.log("Activity pressed:", activity.title);
   };
 
-  const renderActivity = ({ item }: { item: Activity }) => (
-    <ActivityCard
-      activity={item}
-      onPress={() => handleActivityPress(item)}
-      distance={calculateDistance(item)}
-      participantCount={0} // TODO: Fetch actual participant count
-      isJoined={activeTab === "joined"}
-    />
-  );
+  const handleEdit = (activity: Activity) => {
+    setEditingActivity(activity);
+    setIsEditModalVisible(true);
+  };
+
+  const handleDelete = async (activityId: string) => {
+    Alert.alert(
+      "Delete Activity",
+      "Are you sure you want to delete this activity? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await database.deleteActivity(activityId);
+              fetchUserActivities();
+              fetchNearbyActivities();
+            } catch (error) {
+              console.error("Delete error:", error);
+              Alert.alert("Error", "Failed to delete activity");
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const renderActivity = ({ item }: { item: any }) => {
+    const isAdmin = item.creator_id === user?.id;
+
+    return (
+      <ActivityCard
+        activity={item}
+        onPress={() => handleActivityPress(item)}
+        distance={calculateDistance(item)}
+        participantCount={item.participant_count || 0}
+        isJoined={activeTab === "joined"}
+        onEdit={
+          activeTab === "my_activities" && isAdmin
+            ? () => handleEdit(item)
+            : undefined
+        }
+        onDelete={
+          activeTab === "my_activities" && isAdmin
+            ? () => handleDelete(item.id)
+            : undefined
+        }
+      />
+    );
+  };
 
   const renderEmptyState = () => {
     let message = "";
@@ -196,6 +247,28 @@ const ActivitiesScreen = () => {
         </View>
       </View>
 
+      {/* Notifications / Pending Requests Banner */}
+      {pendingRequests.length > 0 && (
+        <TouchableOpacity
+          onPress={() => setActiveTab("my_activities")}
+          className="bg-indigo-50 mx-4 mt-4 p-4 rounded-2xl flex-row items-center border border-indigo-100"
+        >
+          <View className="bg-indigo-600 p-2 rounded-full">
+            <Ionicons name="people" size={20} color="white" />
+          </View>
+          <View className="ml-3 flex-1">
+            <Text className="text-indigo-900 font-bold">
+              Join Requests Pending
+            </Text>
+            <Text className="text-indigo-700 text-xs">
+              {pendingRequests.length} user(s) are trying to join your
+              activities.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#4f46e5" />
+        </TouchableOpacity>
+      )}
+
       {/* Activities List */}
       <FlatList
         data={getDisplayActivities()}
@@ -211,6 +284,20 @@ const ActivitiesScreen = () => {
         activity={selectedActivity}
         visible={!!selectedActivity}
         onClose={() => setSelectedActivity(null)}
+      />
+      <CreateActivityModal
+        visible={isEditModalVisible}
+        onClose={() => {
+          setIsEditModalVisible(false);
+          setEditingActivity(null);
+        }}
+        initialData={editingActivity || undefined}
+        onActivityUpdated={() => {
+          setIsEditModalVisible(false);
+          setEditingActivity(null);
+          fetchUserActivities();
+          fetchNearbyActivities();
+        }}
       />
     </View>
   );

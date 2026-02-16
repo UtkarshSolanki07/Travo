@@ -9,10 +9,11 @@ import { getRoute, LatLng } from "@/services/routes";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import debounce from "lodash.debounce";
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import {
   FlatList,
   Keyboard,
@@ -53,6 +54,8 @@ const MapScreen = () => {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null,
   );
+  const hasInitialized = useRef(false);
+  const hasCentered = useRef(false);
 
   useEffect(() => {
     console.log("Selected Location changed:", selectedLocation);
@@ -63,7 +66,6 @@ const MapScreen = () => {
   }, [route]);
 
   const trackingSubscription = useRef<any>(null);
-  const toggleRequestId = useRef(0);
   const interestsRef = useRef<string[]>([]);
 
   const fallbackRegion = {
@@ -107,41 +109,42 @@ const MapScreen = () => {
     [updateLocation],
   );
 
-  const handleToggleLocation = async (value: boolean) => {
-    const previous = isLocationEnabled;
-    const currentRequestId = ++toggleRequestId.current;
-    setIsLocationEnabled(value);
+  const handleToggleLocation = useCallback(
+    async (value: boolean) => {
+      setIsLocationEnabled(value);
 
-    if (!clerkUser) {
-      if (value) setIsLocationEnabled(false);
-      return;
-    }
-
-    try {
-      if (value) {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") throw new Error("Permission denied");
-        await startForegroundWatch(clerkUser.id);
-        await database.updateProfile(clerkUser.id, {
-          is_live_tracking: true,
-          interests: interestsRef.current || [],
-        });
-      } else {
-        if (trackingSubscription.current) {
-          trackingSubscription.current.remove();
-          trackingSubscription.current = null;
-        }
-        await database.updateProfile(clerkUser.id, {
-          is_live_tracking: false,
-          interests: interestsRef.current || [],
-        });
-        await SecureStore.deleteItemAsync("current_user_id");
+      if (!clerkUser) {
+        if (value) setIsLocationEnabled(false);
+        return;
       }
-    } catch (error) {
-      console.error("Toggle location failed", error);
-      setIsLocationEnabled(previous);
-    }
-  };
+
+      try {
+        if (value) {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== "granted") throw new Error("Permission denied");
+          await startForegroundWatch(clerkUser.id);
+          await database.updateProfile(clerkUser.id, {
+            is_live_tracking: true,
+            interests: interestsRef.current || [],
+          });
+        } else {
+          if (trackingSubscription.current) {
+            trackingSubscription.current.remove();
+            trackingSubscription.current = null;
+          }
+          await database.updateProfile(clerkUser.id, {
+            is_live_tracking: false,
+            interests: interestsRef.current || [],
+          });
+          await SecureStore.deleteItemAsync("current_user_id");
+        }
+      } catch (error) {
+        console.error("Toggle location failed", error);
+        setIsLocationEnabled(false);
+      }
+    },
+    [clerkUser, startForegroundWatch],
+  );
 
   const debouncedSearch = useRef(
     debounce(async (text: string) => {
@@ -217,10 +220,43 @@ const MapScreen = () => {
     setResults([]);
   };
 
-  // Centering effect
+  // Initialization Effect
+  useEffect(() => {
+    if (!clerkUser || hasInitialized.current) return;
+
+    const init = async () => {
+      hasInitialized.current = true;
+      try {
+        // 1. Get current position immediately to seed the map
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          updateLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+        }
+
+        // 2. Sync profile and resume tracking if needed
+        const profile = await database.getProfile(clerkUser.id);
+        if (profile?.is_live_tracking) {
+          handleToggleLocation(true);
+        }
+      } catch (e) {
+        console.error("App init failed", e);
+      }
+    };
+
+    init();
+  }, [clerkUser, handleToggleLocation, updateLocation]);
+
+  // Centering effect (Only once automatically)
   useEffect(() => {
     const target = selectedLocation || userLocation;
-    if (target) {
+    if (target && !hasCentered.current) {
+      hasCentered.current = true;
       mapRef.current?.animateToRegion(
         {
           latitude: target.latitude,
@@ -233,40 +269,48 @@ const MapScreen = () => {
     }
   }, [selectedLocation, userLocation]);
 
-  // Fetch activities when user location changes
-  useEffect(() => {
+  const recenter = () => {
+    const target = userLocation || fallbackRegion;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: target.latitude,
+        longitude: target.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      },
+      800,
+    );
+  };
+
+  const fetchActivities = useCallback(async () => {
     if (!userLocation) return;
-
-    const fetchActivities = async () => {
-      try {
-        const fetchedActivities = await database.getActivities({
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-          radiusKm: 50, // 50km radius
-          status: "upcoming",
-        });
-        setActivities(fetchedActivities);
-      } catch (error) {
-        console.error("Failed to fetch activities:", error);
-      }
-    };
-
-    fetchActivities();
+    try {
+      const fetchedActivities = await database.getActivities({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        radiusKm: 50,
+        status: "upcoming",
+      });
+      setActivities(fetchedActivities);
+    } catch (error) {
+      console.error("Failed to fetch activities:", error);
+    }
   }, [userLocation]);
 
+  // Fetch when location changes
+  useEffect(() => {
+    fetchActivities();
+  }, [fetchActivities]);
+
+  // Refresh when tab focused
+  useFocusEffect(
+    useCallback(() => {
+      fetchActivities();
+    }, [fetchActivities]),
+  );
+
   const handleActivityCreated = () => {
-    // Refresh activities after creation
-    if (userLocation) {
-      database
-        .getActivities({
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-          radiusKm: 50,
-          status: "upcoming",
-        })
-        .then(setActivities)
-        .catch(console.error);
-    }
+    fetchActivities();
   };
 
   // Route fetching logic
@@ -301,7 +345,7 @@ const MapScreen = () => {
         initialRegion={fallbackRegion}
         showsTraffic={true}
         showsUserLocation={true}
-        showsMyLocationButton={true}
+        showsMyLocationButton={false} // We add our own
       >
         {userLocation && (
           <Marker
@@ -374,6 +418,16 @@ const MapScreen = () => {
         visible={!!selectedActivity}
         onClose={() => setSelectedActivity(null)}
       />
+
+      {/* Recenter Button */}
+      <View className="absolute right-4 bottom-32 z-30">
+        <TouchableOpacity
+          className="h-11 w-11 items-center justify-center rounded-full bg-white shadow-lg"
+          onPress={recenter}
+        >
+          <Ionicons name="locate" size={24} color="#6366f1" />
+        </TouchableOpacity>
+      </View>
 
       {/* Floating Menu Toggle */}
       <View className="absolute right-4 top-12 z-30">

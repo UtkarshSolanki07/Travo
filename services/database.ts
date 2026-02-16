@@ -486,6 +486,23 @@ export const database = {
     });
 
     if (error) throw error;
+
+    // Automatically add creator as an approved participant and host
+    const { error: participantError } = await supabase
+      .from("activity_participants")
+      .insert({
+        activity_id: id,
+        user_id: data.creator_id,
+        is_host: true,
+        status: "approved",
+        joined_at: new Date().toISOString(),
+      });
+
+    if (participantError) {
+      console.error("Failed to add creator as participant:", participantError);
+      // We don't throw here to avoid failing the whole activity creation
+    }
+
     return id;
   },
 
@@ -502,7 +519,7 @@ export const database = {
   }): Promise<Activity[]> {
     let query = supabase
       .from("activities")
-      .select("*")
+      .select("*, participant_count:activity_participants(count)")
       .order("start_time", { ascending: true });
 
     if (filters?.status) {
@@ -517,7 +534,10 @@ export const database = {
 
     if (error) throw error;
 
-    let activities = data || [];
+    let activities = (data || []).map((activity: any) => ({
+      ...activity,
+      participant_count: activity.participant_count?.[0]?.count || 0,
+    }));
 
     // Filter by proximity if coordinates provided
     if (
@@ -578,20 +598,25 @@ export const database = {
   async getActivityById(activityId: string): Promise<Activity | null> {
     const { data, error } = await supabase
       .from("activities")
-      .select("*")
+      .select("*, participant_count:activity_participants(count)")
       .eq("id", activityId)
       .maybeSingle();
 
     if (error) throw error;
-    return data;
+    if (!data) return null;
+
+    return {
+      ...data,
+      participant_count: (data as any).participant_count?.[0]?.count || 0,
+    } as any;
   },
 
   /**
    * Request to join an activity (requires admin approval)
    */
-  async requestToJoinActivity(activityId: string, userId: string) {
+  async requestToJoinActivity(activity_id: string, userId: string) {
     const { error } = await supabase.from("activity_participants").insert({
-      activity_id: activityId,
+      activity_id,
       user_id: userId,
       status: "pending",
       joined_at: new Date().toISOString(),
@@ -673,7 +698,7 @@ export const database = {
     // Get created activities
     const { data: created, error: createdError } = await supabase
       .from("activities")
-      .select("*")
+      .select("*, participant_count:activity_participants(count)")
       .eq("creator_id", userId)
       .order("start_time", { ascending: true });
 
@@ -682,18 +707,31 @@ export const database = {
     // Get joined activities
     const { data: joinedData, error: joinedError } = await supabase
       .from("activity_participants")
-      .select("activity:activities(*)")
+      .select(
+        "activity:activities(*, participant_count:activity_participants(count))",
+      )
       .eq("user_id", userId)
       .eq("status", "approved");
 
     if (joinedError) throw joinedError;
 
+    const createdWithCount = (created || []).map((a: any) => ({
+      ...a,
+      participant_count: a.participant_count?.[0]?.count || 0,
+    }));
+
     const joined = (joinedData || [])
-      .map((item: any) => item.activity)
+      .map((item: any) => {
+        if (!item.activity) return null;
+        return {
+          ...item.activity,
+          participant_count: item.activity.participant_count?.[0]?.count || 0,
+        };
+      })
       .filter(Boolean);
 
     return {
-      created: created || [],
+      created: createdWithCount,
       joined: joined || [],
     };
   },
@@ -751,5 +789,44 @@ export const database = {
     if (error) throw error;
     if (!data) return "none";
     return data.status as "pending" | "approved";
+  },
+
+  /**
+   * Fetches all pending join requests for activities created by this user
+   */
+  async getPendingRequestsForUser(userId: string) {
+    const { data, error } = await supabase
+      .from("activity_participants")
+      .select("*, activity:activities(*), user:users(*)")
+      .eq("activities.creator_id", userId)
+      .eq("status", "pending")
+      .order("joined_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  /**
+   * Delete an activity
+   */
+  async deleteActivity(activityId: string) {
+    const { error } = await supabase
+      .from("activities")
+      .delete()
+      .eq("id", activityId);
+
+    if (error) throw error;
+  },
+
+  /**
+   * Update an existing activity
+   */
+  async updateActivity(id: string, updates: Partial<Activity>) {
+    const { error } = await supabase
+      .from("activities")
+      .update(updates)
+      .eq("id", id);
+
+    if (error) throw error;
   },
 };

@@ -1,25 +1,26 @@
 import {
-    database,
-    type ActivitySize,
-    type ActivityVisibility,
+  database,
+  type Activity,
+  type ActivitySize,
+  type ActivityVisibility,
 } from "@/services/database";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface CreateActivityModalProps {
@@ -31,6 +32,8 @@ interface CreateActivityModalProps {
     city?: string;
   };
   onActivityCreated?: () => void;
+  onActivityUpdated?: () => void;
+  initialData?: Activity;
 }
 
 const INTERESTS = [
@@ -95,6 +98,8 @@ export default function CreateActivityModal({
   onClose,
   initialLocation,
   onActivityCreated,
+  onActivityUpdated,
+  initialData,
 }: CreateActivityModalProps) {
   const { user } = useUser();
   const [title, setTitle] = useState("");
@@ -105,8 +110,26 @@ export default function CreateActivityModal({
   const [startTime, setStartTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [maxParticipants, setMaxParticipants] = useState("10");
-  const [visibility, setVisibility] = useState<ActivityVisibility>("public");
+  const [visibility, setVisibility] = useState<ActivityVisibility>(
+    initialData?.visibility || "public",
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Initialize form with initialData if editing
+  useEffect(() => {
+    if (initialData && visible) {
+      setTitle(initialData.title);
+      setDescription(initialData.description || "");
+      setActivityType(initialData.activity_type || "");
+      setSizeType(initialData.size_type);
+      setSelectedInterests(initialData.interests || []);
+      setStartTime(new Date(initialData.start_time));
+      setMaxParticipants(initialData.max_participants.toString());
+      setVisibility(initialData.visibility);
+    } else if (!initialData && visible) {
+      resetForm();
+    }
+  }, [initialData, visible]);
 
   const toggleInterest = (interest: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -127,7 +150,7 @@ export default function CreateActivityModal({
       return;
     }
 
-    if (!initialLocation) {
+    if (!initialData && !initialLocation) {
       Alert.alert("Error", "Location is required");
       return;
     }
@@ -141,29 +164,48 @@ export default function CreateActivityModal({
     setIsSubmitting(true);
 
     try {
-      await database.createActivity({
-        creator_id: user.id,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        activity_type: activityType.trim() || undefined,
-        size_type: sizeType,
-        interests: selectedInterests.length > 0 ? selectedInterests : undefined,
-        start_time: startTime.toISOString(),
-        latitude: initialLocation.latitude,
-        longitude: initialLocation.longitude,
-        city: initialLocation.city,
-        max_participants: parseInt(maxParticipants) || 10,
-        visibility,
-        status: "upcoming",
-      });
+      if (initialData) {
+        await database.updateActivity(initialData.id, {
+          title: title.trim(),
+          description: description.trim() || undefined,
+          activity_type: activityType.trim() || undefined,
+          size_type: sizeType,
+          interests: selectedInterests.length > 0 ? selectedInterests : [],
+          start_time: startTime.toISOString(),
+          max_participants: parseInt(maxParticipants) || 10,
+          visibility,
+        });
+        Alert.alert("Success", "Activity updated successfully!");
+        onActivityUpdated?.();
+      } else {
+        await database.createActivity({
+          creator_id: user.id,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          activity_type: activityType.trim() || undefined,
+          size_type: sizeType,
+          interests:
+            selectedInterests.length > 0 ? selectedInterests : undefined,
+          start_time: startTime.toISOString(),
+          latitude: initialLocation!.latitude,
+          longitude: initialLocation!.longitude,
+          city: initialLocation?.city,
+          max_participants: parseInt(maxParticipants) || 10,
+          visibility,
+          status: "upcoming",
+        });
+        Alert.alert("Success", "Activity created successfully!");
+        onActivityCreated?.();
+      }
 
-      Alert.alert("Success", "Activity created successfully!");
       resetForm();
-      onActivityCreated?.();
       onClose();
     } catch (error) {
-      console.error("Failed to create activity:", error);
-      Alert.alert("Error", "Failed to create activity. Please try again.");
+      console.error("Failed to save activity:", error);
+      Alert.alert(
+        "Error",
+        `Failed to ${initialData ? "update" : "create"} activity.`,
+      );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsSubmitting(false);
@@ -214,19 +256,21 @@ export default function CreateActivityModal({
             >
               <Ionicons name="close" size={24} color="white" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>New Activity</Text>
+            <Text style={styles.headerTitle}>
+              {initialData ? "Edit Activity" : "New Activity"}
+            </Text>
             <TouchableOpacity
               onPress={handleCreate}
               disabled={isSubmitting}
               style={[styles.createButton, isSubmitting && { opacity: 0.5 }]}
             >
               <Text style={styles.createButtonText}>
-                {isSubmitting ? "..." : "Create"}
+                {isSubmitting ? "..." : initialData ? "Update" : "Create"}
               </Text>
             </TouchableOpacity>
           </View>
 
-          {initialLocation && (
+          {!initialData && initialLocation && (
             <View style={styles.locationBadge}>
               <View style={styles.locationIconWrapper}>
                 <Ionicons name="location" size={18} color="white" />
@@ -484,7 +528,11 @@ export default function CreateActivityModal({
                 style={styles.launchBtn}
               >
                 <Text style={styles.launchBtnText}>
-                  {isSubmitting ? "Lauching..." : "Launch Activity"}
+                  {isSubmitting
+                    ? "Saving..."
+                    : initialData
+                      ? "Update Activity"
+                      : "Launch Activity"}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>

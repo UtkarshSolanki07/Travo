@@ -10,6 +10,8 @@ interface ActivityCardProps {
   participantCount?: number;
   isJoined?: boolean;
   isPending?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export default function ActivityCard({
@@ -19,6 +21,8 @@ export default function ActivityCard({
   participantCount = 0,
   isJoined = false,
   isPending = false,
+  onEdit,
+  onDelete,
 }: ActivityCardProps) {
   const startTime = new Date(activity.start_time);
   const now = new Date();
@@ -149,6 +153,33 @@ export default function ActivityCard({
                 +{activity.interests.length - 3}
               </Text>
             </View>
+          )}
+        </View>
+      )}
+      {/* Admin Actions */}
+      {(onEdit || onDelete) && (
+        <View className="flex-row gap-2 mt-4 pt-4 border-t border-slate-50">
+          {onEdit && (
+            <TouchableOpacity
+              onPress={onEdit}
+              className="flex-1 flex-row items-center justify-center bg-indigo-50 py-2.5 rounded-xl border border-indigo-100"
+            >
+              <Ionicons name="create-outline" size={16} color="#4f46e5" />
+              <Text className="text-indigo-600 font-bold text-xs ml-2">
+                Update
+              </Text>
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity
+              onPress={onDelete}
+              className="flex-1 flex-row items-center justify-center bg-red-50 py-2.5 rounded-xl border border-red-100"
+            >
+              <Ionicons name="trash-outline" size={16} color="#ef4444" />
+              <Text className="text-red-600 font-bold text-xs ml-2">
+                Delete
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
       )}
