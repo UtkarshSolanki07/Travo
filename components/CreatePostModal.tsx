@@ -104,7 +104,7 @@ export default function CreatePostModal({
               {postMedia ? (
                 <View className="w-full h-full relative">
                   {postMedia.type === "video" ? (
-                    videoPlayer && (
+                    videoPlayer ? (
                       <VideoView
                         style={{ width: "100%", height: "100%" }}
                         player={videoPlayer}
@@ -112,6 +112,10 @@ export default function CreatePostModal({
                         allowsPictureInPicture
                         nativeControls
                       />
+                    ):(
+                      <View className="w-full h-full items-center justify-center bg-slate-200">
+                        <ActivityIndicator size="small" color="#6366f1" />
+                      </View>
                     )
                   ) : (
                     <Image

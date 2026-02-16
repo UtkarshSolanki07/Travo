@@ -303,8 +303,21 @@ const MapScreen = () => {
     );
   };
 
+  const lastActivityFetchPosition = useRef<{ latitude: number; longitude: number } | null>(null);
+const ACTIVITY_FETCH_DISTANCE_THRESHOLD = 0.5; // 500m
+
   const fetchActivities = useCallback(async () => {
     if (!userLocation) return;
+    if (lastActivityFetchPosition.current) {
+    const dist = database.calculateDistance(
+       lastActivityFetchPosition.current.latitude,
+       lastActivityFetchPosition.current.longitude,
+       userLocation.latitude,
+       userLocation.longitude,
+     );
+     if (dist < ACTIVITY_FETCH_DISTANCE_THRESHOLD) return;
+   }
+
     try {
       const fetchedActivities = await database.getActivities({
         latitude: userLocation.latitude,
@@ -313,6 +326,7 @@ const MapScreen = () => {
         status: "upcoming",
       });
       setActivities(fetchedActivities);
+      lastActivityFetchPosition.current = { ...userLocation };
     } catch (error) {
       console.error("Failed to fetch activities:", error);
     }
@@ -405,13 +419,6 @@ const MapScreen = () => {
         showsUserLocation={true}
         showsMyLocationButton={false} // We add our own
       >
-        {userLocation && (
-          <Marker
-            coordinate={userLocation}
-            title="My Location"
-            pinColor="blue"
-          />
-        )}
         {selectedLocation && (
           <Marker
             coordinate={selectedLocation}

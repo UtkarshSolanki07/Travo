@@ -161,8 +161,8 @@ export const searchLocations = async (
       url += `&bias=proximity:${proximity.longitude},${proximity.latitude}`;
     }
 
-    // Prefer cities and countries
-    url += `&type=city,country,locality`;
+    // Prefer cities and localities
+    url += `&type=locality`;
 
     const res = await fetchWithTimeout(url);
     if (!res.ok) {

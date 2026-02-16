@@ -501,7 +501,9 @@ export const database = {
 
     if (participantError) {
       console.error("Failed to add creator as participant:", participantError);
-      // We don't throw here to avoid failing the whole activity creation
+      // Rollback: Delete the activity if the creator couldn't be added as host
+      await supabase.from("activities").delete().eq("id", id);
+      throw participantError;
     }
 
     return id;
@@ -529,6 +531,21 @@ export const database = {
 
     if (filters?.visibility) {
       query = query.eq("visibility", filters.visibility);
+    }
+
+    // Pre-filter with a bounding box to reduce result set
+    if (
+      filters?.latitude !== undefined &&
+      filters?.longitude !== undefined &&
+      filters?.radiusKm
+    ) {
+      const latDelta = filters.radiusKm / 111; // ~111km per degree
+      const lonDelta = filters.radiusKm / (111 * Math.cos(filters.latitude * Math.PI / 180));
+     query = query
+        .gte("latitude", filters.latitude - latDelta)
+        .lte("latitude", filters.latitude + latDelta)
+        .gte("longitude", filters.longitude - lonDelta)
+        .lte("longitude", filters.longitude + lonDelta);
     }
 
     const { data, error } = await query;

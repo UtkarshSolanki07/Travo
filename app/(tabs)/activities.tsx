@@ -6,7 +6,7 @@ import { database, type Activity } from "@/services/database";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -117,18 +117,18 @@ const ActivitiesScreen = () => {
     }, [fetchNearbyActivities, fetchUserActivities]),
   );
 
-  const getDisplayActivities = () => {
-    switch (activeTab) {
-      case "nearby":
-        return nearbyActivities;
-      case "my_activities":
-        return myActivities;
-      case "joined":
-        return joinedActivities;
-      default:
-        return [];
-    }
-  };
+  const displayActivities = useMemo(() => {
+  switch (activeTab) {
+     case "nearby":
+       return nearbyActivities;
+     case "my_activities":
+       return myActivities;
+     case "joined":
+       return joinedActivities;
+     default:
+       return [];
+   }
+ }, [activeTab, nearbyActivities, myActivities, joinedActivities]);
 
   const calculateDistance = (activity: Activity) => {
     if (!userLocation) return undefined;
@@ -309,7 +309,7 @@ const ActivitiesScreen = () => {
 
       {/* Activities List */}
       <FlatList
-        data={getDisplayActivities()}
+        data={displayActivities}
         renderItem={renderActivity}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16 }}
