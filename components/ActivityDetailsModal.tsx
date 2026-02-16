@@ -22,6 +22,19 @@ interface ActivityDetailsModalProps {
   onClose: () => void;
 }
 
+/**
+ * Render a modal that displays detailed activity information and provides user and admin controls.
+ *
+ * Shows activity metadata (title, date, location, description), a participants summary, and context-specific actions:
+ * - For non-admin users: request to join, show pending state, or leave the activity.
+ * - For admins: edit and delete actions, and an admin dashboard to approve or decline pending join requests (with optional decline reason).
+ * The component fetches participants, pending requests (when the current user is the creator), and the current user's participation status when the modal becomes visible.
+ *
+ * @param activity - The activity to display; when `null` the component renders nothing.
+ * @param visible - Whether the modal is visible.
+ * @param onClose - Callback invoked to close the modal.
+ * @returns The rendered modal UI or `null` when no activity is provided.
+ */
 export default function ActivityDetailsModal({
   activity,
   visible,

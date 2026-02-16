@@ -2,6 +2,11 @@ import { View, Text } from 'react-native'
 import { Link } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 
+/**
+ * Renders a centered "not signed in" screen with a lock icon and navigation links to sign in and sign up.
+ *
+ * @returns A React element containing a lock icon, a heading, supporting subtext, and "Sign in" / "Sign up" navigation buttons.
+ */
 export default function LoggedOutView() {
   return (
     <View className="flex-1 items-center justify-center mt-24">

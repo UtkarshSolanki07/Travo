@@ -93,6 +93,17 @@ const VISIBILITY_OPTIONS = [
   },
 ];
 
+/**
+ * Modal dialog for creating a new activity or editing an existing one.
+ *
+ * @param visible - Whether the modal is visible.
+ * @param onClose - Callback invoked to close the modal.
+ * @param initialLocation - Optional selected location (latitude, longitude, city); required when creating a new activity.
+ * @param onActivityCreated - Optional callback invoked after a successful activity creation.
+ * @param onActivityUpdated - Optional callback invoked after a successful activity update.
+ * @param initialData - Optional activity data; when present the modal operates in edit mode and pre-fills the form.
+ * @returns The modal component JSX for creating or editing an activity.
+ */
 export default function CreateActivityModal({
   visible,
   onClose,

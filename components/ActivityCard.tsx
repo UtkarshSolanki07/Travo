@@ -14,6 +14,19 @@ interface ActivityCardProps {
   onDelete?: () => void;
 }
 
+/**
+ * Renders an activity card summarizing an Activity and exposes interaction handlers.
+ *
+ * @param activity - The activity data to display (title, start_time, status, description, interests, size_type, max_participants, etc.).
+ * @param onPress - Handler invoked when the card is pressed.
+ * @param distance - Optional distance in kilometers; displayed as meters when less than 1 km.
+ * @param participantCount - Current number of participants (defaults to 0).
+ * @param isJoined - When true, displays a "Joined" badge (defaults to false).
+ * @param isPending - When true, displays a "Pending" badge (defaults to false).
+ * @param onEdit - Optional handler for the Update action; when provided an Update button is rendered.
+ * @param onDelete - Optional handler for the Delete action; when provided a Delete button is rendered.
+ * @returns A React element representing the composed activity card UI.
+ */
 export default function ActivityCard({
   activity,
   onPress,

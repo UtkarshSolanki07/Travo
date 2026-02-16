@@ -43,6 +43,37 @@ interface EditPostModalProps {
   onUpdatePost: () => void;
 }
 
+/**
+ * Render a modal UI for editing an existing post, including media preview/picker, text editing, visibility controls, venue/location search and selection, and an update action.
+ *
+ * @param visible - Controls whether the modal is shown
+ * @param post - The current post object being edited (may be null)
+ * @param postText - Current post text value displayed in the editor
+ * @param postMedia - Media currently selected for the post (`{ uri, type }`) or null
+ * @param venueName - Current text in the venue search input
+ * @param locationName - Current text in the location search input
+ * @param venueResults - Array of venue search results to display
+ * @param locationResults - Array of location search results to display
+ * @param isSearchingVenue - True while venue search is in progress
+ * @param isSearchingLocation - True while location search is in progress
+ * @param updating - True while the post update is being submitted (disables the update button)
+ * @param videoPlayer - Video player reference used to render native video controls for video media
+ * @param postCity - Optional city string associated with the post (shown as a badge when present)
+ * @param postCountry - Optional country string associated with the post (shown as a badge when present)
+ * @param visibility - Current visibility setting for the post (`"public"` or `"friends"`)
+ * @param onVisibilityChange - Callback invoked with `"public"` or `"friends"` when visibility is changed
+ * @param onClose - Callback to close the modal
+ * @param onPostTextChange - Callback invoked when the post text changes
+ * @param onPickMedia - Callback to trigger media selection
+ * @param onRemoveMedia - Callback to remove the currently selected media
+ * @param onVenueSearch - Callback invoked with venue search text
+ * @param onLocationSearch - Callback invoked with location search text
+ * @param onSelectVenue - Callback invoked with a venue item when selected
+ * @param onSelectLocation - Callback invoked with a location item when selected
+ * @param onUpdatePost - Callback invoked to submit the updated post
+ *
+ * @returns The rendered Edit Post modal element
+ */
 export default function EditPostModal({
   visible,
   post,

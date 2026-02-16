@@ -20,6 +20,13 @@ import PostsGrid from "@/components/PostsGrid";
 import PostsTabs from "@/components/PostsTabs";
 import ProfileHeader from "@/components/ProfileHeader";
 
+/**
+ * Render the profile screen that lets the authenticated user view and manage their profile, interests, posts, and post interactions.
+ *
+ * This component loads the current user's profile and posts, provides UI for editing the profile and avatar, creating and editing posts (with optional media, venue/location, city/country, and visibility), searching/selecting venues and locations, viewing post details with comments and likes, and managing interests. It also manages video playback for post media and keeps local UI state in sync with persistent storage.
+ *
+ * @returns The rendered profile screen JSX element.
+ */
 export default function ProfileScreen() {
   const { user: clerkUser } = useUser();
   const { userLocation, setUserLocation: updateLocation } = useMapContext();
