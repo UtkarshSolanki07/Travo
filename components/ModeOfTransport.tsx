@@ -160,7 +160,8 @@ export default function ModeOfTransport({
     ];
   }, [distanceKm, driveDurationMin, timeOfDay]);
 
-  if (!distanceKm || !driveDurationMin) return null;
+  if (!Number.isFinite(distanceKm) || !Number.isFinite(driveDurationMin))
+    return null;
 
   return (
     <View className="flex-row justify-between w-full mt-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">

@@ -83,7 +83,7 @@ export default function ActivityDetailsModal({
         "Request Sent",
         "Your request to join has been sent to the admin.",
       );
-      fetchData();
+      await fetchData();
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to send request");
     } finally {
@@ -97,7 +97,7 @@ export default function ActivityDetailsModal({
     try {
       await database.leaveActivity(activity.id, clerkUser.id);
       Alert.alert("Left Activity", "You have left the activity.");
-      fetchData();
+      await fetchData();
     } catch (error) {
       console.error("handleLeave error:", error);
       Alert.alert("Error", "Failed to leave activity");
@@ -106,7 +106,7 @@ export default function ActivityDetailsModal({
     }
   };
 
-  const handleApprove = async (requesterId: string) => {
+  const handleApprove = (requesterId: string) => {
     if (!activity || !clerkUser) return;
 
     Alert.alert(
@@ -116,22 +116,24 @@ export default function ActivityDetailsModal({
         { text: "Cancel", style: "cancel" },
         {
           text: "Allow",
-          onPress: async () => {
-            try {
-              await database.approveJoinRequest(
-                activity.id,
-                requesterId,
-                clerkUser.id,
-              );
-              fetchData();
-            } catch (error) {
-              console.error("handleApprove error:", error);
-              Alert.alert("Error", "Failed to approve request");
-            }
-          },
+          onPress: () => confirmApprove(requesterId),
         },
       ],
     );
+  };
+
+  const confirmApprove = async (requesterId: string) => {
+    if (!activity || !clerkUser) return;
+    try {
+      setActionLoading(true);
+      await database.approveJoinRequest(activity.id, requesterId, clerkUser.id);
+      await fetchData();
+    } catch (error) {
+      console.error("handleApprove error:", error);
+      Alert.alert("Error", "Failed to approve request");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleReject = (requesterId: string) => {
@@ -158,7 +160,7 @@ export default function ActivityDetailsModal({
       setRejectModalVisible(false);
       setRejectReason("");
       setSelectedRequesterId(null);
-      fetchData();
+      await fetchData();
     } catch (error) {
       console.error("confirmReject error:", error);
       Alert.alert("Error", "Failed to reject request");
@@ -167,7 +169,7 @@ export default function ActivityDetailsModal({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!activity) return;
 
     Alert.alert(
@@ -178,21 +180,24 @@ export default function ActivityDetailsModal({
         {
           text: "Delete",
           style: "destructive",
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              await database.deleteActivity(activity.id);
-              onClose();
-            } catch (error) {
-              console.error("handleDelete error:", error);
-              Alert.alert("Error", "Failed to delete activity");
-            } finally {
-              setActionLoading(false);
-            }
-          },
+          onPress: confirmDelete,
         },
       ],
     );
+  };
+
+  const confirmDelete = async () => {
+    if (!activity) return;
+    try {
+      setActionLoading(true);
+      await database.deleteActivity(activity.id);
+      onClose();
+    } catch (error) {
+      console.error("handleDelete error:", error);
+      Alert.alert("Error", "Failed to delete activity");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   if (!activity) return null;
@@ -518,9 +523,9 @@ export default function ActivityDetailsModal({
             visible={editModalVisible}
             onClose={() => setEditModalVisible(false)}
             initialData={activity}
-            onActivityUpdated={() => {
+            onActivityUpdated={async () => {
               setEditModalVisible(false);
-              fetchData();
+              await fetchData();
             }}
           />
         </View>

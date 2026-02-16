@@ -56,6 +56,17 @@ const MapScreen = () => {
   );
   const hasInitialized = useRef(false);
   const hasCentered = useRef(false);
+  const trackingSubscription = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      console.log("MapScreen unmounting, cleaning up subscription");
+      if (trackingSubscription.current) {
+        trackingSubscription.current.remove();
+        trackingSubscription.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     console.log("Selected Location changed:", selectedLocation);
@@ -65,7 +76,6 @@ const MapScreen = () => {
     console.log("Route changed:", !!route);
   }, [route]);
 
-  const trackingSubscription = useRef<any>(null);
   const interestsRef = useRef<string[]>([]);
 
   const fallbackRegion = {

@@ -172,11 +172,13 @@ export default function CreateActivityModal({
           size_type: sizeType,
           interests: selectedInterests.length > 0 ? selectedInterests : [],
           start_time: startTime.toISOString(),
-          max_participants: parseInt(maxParticipants) || 10,
+          max_participants: Number.isFinite(parseInt(maxParticipants))
+            ? parseInt(maxParticipants)
+            : 10,
           visibility,
         });
         Alert.alert("Success", "Activity updated successfully!");
-        onActivityUpdated?.();
+        await onActivityUpdated?.();
       } else {
         await database.createActivity({
           creator_id: user.id,
@@ -190,12 +192,14 @@ export default function CreateActivityModal({
           latitude: initialLocation!.latitude,
           longitude: initialLocation!.longitude,
           city: initialLocation?.city,
-          max_participants: parseInt(maxParticipants) || 10,
+          max_participants: Number.isFinite(parseInt(maxParticipants))
+            ? parseInt(maxParticipants)
+            : 10,
           visibility,
           status: "upcoming",
         });
         Alert.alert("Success", "Activity created successfully!");
-        onActivityCreated?.();
+        await onActivityCreated?.();
       }
 
       resetForm();

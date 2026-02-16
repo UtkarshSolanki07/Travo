@@ -3,17 +3,25 @@ import { Post } from "@/services/database";
 import { Ionicons } from "@expo/vector-icons";
 import { VideoView } from "expo-video";
 import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+
+interface PlaceResult {
+  id?: string;
+  place_id?: string;
+  place_name: string;
+  text?: string;
+  context?: { id: string; text: string }[];
+}
 
 interface EditPostModalProps {
   visible: boolean;
@@ -22,8 +30,8 @@ interface EditPostModalProps {
   postMedia: { uri: string; type: "image" | "video" } | null;
   venueName: string;
   locationName: string;
-  venueResults: any[];
-  locationResults: any[];
+  venueResults: PlaceResult[];
+  locationResults: PlaceResult[];
   isSearchingVenue: boolean;
   isSearchingLocation: boolean;
   updating: boolean;
@@ -142,6 +150,12 @@ export default function EditPostModal({
                   <View className="absolute bottom-2.5 left-2.5 bg-black/60 px-3 py-1.5 rounded-lg">
                     <Text className="text-white text-xs">Tap to change</Text>
                   </View>
+                  <TouchableOpacity
+                    className="absolute top-2.5 right-2.5 bg-white rounded-xl"
+                    onPress={onRemoveMedia}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#ef4444" />
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <>
@@ -224,7 +238,7 @@ export default function EditPostModal({
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
                 {venueResults.map((item, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={item.place_id || item.id || index}
                     className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
                     onPress={() => onSelectVenue(item)}
                   >
@@ -257,7 +271,7 @@ export default function EditPostModal({
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
                 {locationResults.map((item, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={item.place_id || item.id || index}
                     className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
                     onPress={() => onSelectLocation(item)}
                   >

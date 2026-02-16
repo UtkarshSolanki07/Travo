@@ -14,6 +14,8 @@ import {
 } from "react-native";
 
 interface PlaceResult {
+  id?: string;
+  place_id?: string;
   place_name: string;
   text?: string;
   context?: { id: string; text: string }[];
@@ -205,7 +207,7 @@ export default function CreatePostModal({
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
                 {venueResults.map((item, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={item.place_id || item.id || index}
                     className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
                     onPress={() => onSelectVenue(item)}
                   >
@@ -246,7 +248,7 @@ export default function CreatePostModal({
               <View className="bg-white rounded-xl mt-1 border border-slate-200 overflow-hidden">
                 {locationResults.map((item, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={item.place_id || item.id || index}
                     className="flex-row items-center p-3 border-b border-slate-100 gap-2.5"
                     onPress={() => onSelectLocation(item)}
                   >

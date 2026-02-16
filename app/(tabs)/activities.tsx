@@ -123,8 +123,8 @@ const ActivitiesScreen = () => {
           onPress: async () => {
             try {
               await database.deleteActivity(activityId);
-              fetchUserActivities();
-              fetchNearbyActivities();
+              await fetchUserActivities();
+              await fetchNearbyActivities();
             } catch (error) {
               console.error("Delete error:", error);
               Alert.alert("Error", "Failed to delete activity");
@@ -292,11 +292,11 @@ const ActivitiesScreen = () => {
           setEditingActivity(null);
         }}
         initialData={editingActivity || undefined}
-        onActivityUpdated={() => {
+        onActivityUpdated={async () => {
           setIsEditModalVisible(false);
           setEditingActivity(null);
-          fetchUserActivities();
-          fetchNearbyActivities();
+          await fetchUserActivities();
+          await fetchNearbyActivities();
         }}
       />
     </View>

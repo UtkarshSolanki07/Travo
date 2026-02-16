@@ -65,6 +65,7 @@ export default function ProfileScreen() {
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [mediaRemoved, setMediaRemoved] = useState(false);
 
   // Post Detail States
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -605,6 +606,7 @@ export default function ProfileScreen() {
     setPostCountry(selectedPost.country || "");
     setPostVisibility(selectedPost.visibility || "public");
     setPostMedia(null); // Will show existing media from selectedPost
+    setMediaRemoved(false);
     setIsEditingPost(true);
   };
 
@@ -619,6 +621,12 @@ export default function ProfileScreen() {
     try {
       let mediaUrl = selectedPost?.media_url || "";
       let mediaType = selectedPost?.media_type || "note";
+
+      // Handle media removal
+      if (mediaRemoved && !postMedia) {
+        mediaUrl = "";
+        mediaType = "note";
+      }
 
       // If new media is selected, upload it
       if (postMedia) {
@@ -642,6 +650,7 @@ export default function ProfileScreen() {
       setEditingPostId(null);
       setPostText("");
       setPostMedia(null);
+      setMediaRemoved(false);
       setVenueName("");
       setLocationName("");
       setVenueResults([]);
@@ -764,6 +773,7 @@ export default function ProfileScreen() {
             setEditingPostId(null);
             setPostText("");
             setPostMedia(null);
+            setMediaRemoved(false);
             setVenueName("");
             setLocationName("");
             setPostCity("");
@@ -772,7 +782,10 @@ export default function ProfileScreen() {
           }}
           onPostTextChange={setPostText}
           onPickMedia={pickPostMedia}
-          onRemoveMedia={() => setPostMedia(null)}
+          onRemoveMedia={() => {
+            setPostMedia(null);
+            if (isEditingPost) setMediaRemoved(true);
+          }}
           onVenueSearch={handleSearchVenue}
           onLocationSearch={handleSearchLocation}
           onSelectVenue={selectVenue}

@@ -1,5 +1,18 @@
 const GEOAPIFY_API_KEY = process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY;
 
+const fetchWithTimeout = async (url: string, timeout = 10000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    return response;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+};
+
 export interface GeoApifyResult {
   place_id?: string;
   id?: string;
@@ -54,7 +67,7 @@ export const searchVenues = async (
       url += `&filter=circle:${proximity.longitude},${proximity.latitude},50000`;
     }
 
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       console.error(`Geoapify autocomplete error: ${res.status}`);
       return [];
@@ -105,7 +118,7 @@ export const browseVenuesByCategory = async (
     // Use /v2/places for category browsing - NO text parameter
     const url = `https://api.geoapify.com/v2/places?categories=${category}&filter=rect:${bbox.join(",")}&limit=20&apiKey=${GEOAPIFY_API_KEY}`;
 
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       console.error(`Geoapify places v2 error: ${res.status}`);
       return [];
@@ -151,7 +164,7 @@ export const searchLocations = async (
     // Prefer cities, counties, and countries
     url += `&type=city,county,country,locality`;
 
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       console.error(`Geoapify locations error: ${res.status}`);
       return [];
@@ -216,7 +229,7 @@ export const searchAll = async (
       url += `&filter=rect:${bbox.join(",")}`;
     }
 
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       console.error(`Geoapify searchAll error: ${res.status}`);
       return [];
@@ -254,7 +267,7 @@ export const reverseGeocode = async (
 
   try {
     const url = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lon}&apiKey=${GEOAPIFY_API_KEY}`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
 
     if (!res.ok) {
       console.error(`Geoapify reverse geocode error: ${res.status}`);

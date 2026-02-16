@@ -9,6 +9,12 @@ import { database } from "../services/database";
 
 const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
+if (!CLERK_PUBLISHABLE_KEY) {
+  console.error(
+    "Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in environment variables.",
+  );
+}
+
 function InitialLayout() {
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
@@ -48,7 +54,7 @@ function InitialLayout() {
 export default function RootLayout() {
   return (
     <ClerkProvider
-      publishableKey={CLERK_PUBLISHABLE_KEY!}
+      publishableKey={CLERK_PUBLISHABLE_KEY || ""}
       tokenCache={tokenCache}
     >
       <MapProvider>

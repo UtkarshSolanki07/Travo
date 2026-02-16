@@ -142,8 +142,8 @@ export default function ActivityCard({
       {/* Interests Tags */}
       {activity.interests && activity.interests.length > 0 && (
         <View className="flex-row flex-wrap mt-3 gap-2">
-          {activity.interests.slice(0, 3).map((interest, index) => (
-            <View key={index} className="bg-indigo-50 px-2 py-1 rounded-lg">
+          {activity.interests.slice(0, 3).map((interest) => (
+            <View key={interest} className="bg-indigo-50 px-2 py-1 rounded-lg">
               <Text className="text-xs text-indigo-700">{interest}</Text>
             </View>
           ))}
