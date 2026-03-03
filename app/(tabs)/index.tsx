@@ -24,6 +24,13 @@ import * as SecureStore from "expo-secure-store";
 import debounce from "lodash.debounce";
 import { reverseGeocode, searchAll } from "../../services/geoapify";
 
+/**
+ * Main map screen that displays an interactive map with search, place selection, long-press reverse geocoding, and live location controls.
+ *
+ * This component renders a full-screen map with a searchable place list, a selectable marker, and a menu for account and quick settings (including a live tracking toggle that requests permissions and updates the user's live location in the database). It also synchronizes initial shared location from the user's profile and supports starting/stopping foreground location tracking.
+ *
+ * @returns A React element rendering the map interface with search results, selectable markers, and a settings menu including live-tracking controls.
+ */
 export default function Index() {
   const mapRef = useRef<any>(null);
   const router = useRouter();
